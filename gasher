@@ -1,0 +1,57 @@
+#!/bin/bash
+
+#Gasher, a 2MB Solutions product
+# released under the GPL version 3 or later.
+
+# Set up the configuration directory information
+if [ -z "$XDG_USER_HOME" ]; then
+    configPath="$HOME/.config/gasher"
+else
+    configPath="$$XDG_UER_HOME/gasher"
+fi
+if [ ! -d "$configPath" ]; then
+    mkdir -p "$configPath"
+fi
+
+# Create settings if they do not exist.
+if [ ! -f "$configPath/config" ]; then
+    echo "Welcome to $0! A 2MB Solutions product."
+    echo "It appears you do not have a GNU Social account configured."
+    echo "Setup is quick and painless."
+    echo
+    read -p "Please enter your GNU Social username, This is the part before the @ symble: " userName
+    read -p "Please enter your GNU Social node, This is the part after the @ symble and resimble a web address: " userNode
+    read -sp "Please enter your GNU Social password. This is optional, but if not included, you will be prompted for it every time you do anything with $0: " password
+    echo
+    echo -e "userName=$userName\nuserNode=$userNode" > "$configPath/config"
+    if [ "$password" ]; then
+        echo "password=$password" >> "$configPath/config"
+    fi
+    if [ $? -eq 0 ] ; then
+        echo "Thanks, setup is now complete. Welcome to $0 $userName@$userNode."
+    fi
+fi
+
+# read settings
+source "$configPath/config"
+
+# actions are based on $1
+case "$1" in
+"-p" | "--post")
+shift
+status="$*"
+result="$(curl -s -u "$userName:$password" -d status="$status" -d source="$0" $userNode/api/statuses/update.xml)"
+error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+if [ -n "$error" ]; then
+echo "$error"
+exit 1
+fi
+reply="$(echo "$result" | grep '^ <in_reply_to>' | sed -e 's/<in_reply_to>//' -e 's/<\/in_reply_to>//' -e 's/^ //')"
+if [ -n "$reply" ]; then
+echo "Status posted in reply to $reply."
+else
+echo "Status posted"
+fi
+;;
+esac
+exit 0

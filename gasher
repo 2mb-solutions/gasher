@@ -1,7 +1,19 @@
 #!/bin/bash
+show_help()
+{
+cat << EOF
+$0, a 2MB Solutions product.
+ released under the GPL version 3 or later.
+For more great stuff, visit http://2mb.solutions
+Solutions at the speed of AWESOME!
 
-#Gasher, a 2MB Solutions product
-# released under the GPL version 3 or later.
+Usage:
+$0 -h --help: This help screen.
+$0 -m --mentions: Read your mensions (replies).
+$0 -p --post: Post to your node.
+$0 -t --timeline: Read your timeline.
+EOF
+}
 
 # Set up the configuration directory information
 if [ -z "$XDG_USER_HOME" ]; then
@@ -65,5 +77,7 @@ echo "$result" | grep -e '^  <text>' -e '^  <created_at>' -e '^  <source>' | sed
 result="$(curl -s -u "$userName:$password" $userNode/api/statuses/user_timeline.xml)"
 echo "$result" | grep -e '^  <text>' -e '^  <created_at>' -e '^  <source>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/^  <created_at>/Posted: /' -e 's/<\/created_at>//' -e  's/^  <source>/From /' -e 's/<\/source>$//' | $PAGER
 ;;
+*)
+show_help
 esac
 exit 0

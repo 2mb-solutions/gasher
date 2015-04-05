@@ -34,6 +34,10 @@ fi
 
 # read settings
 source "$configPath/config"
+# Pager is set here, to allow the PAGER variable to be set in either invironment or gasher's config
+if [ -z "$PAGER" ]; then
+PAGER=more
+fi
 
 # actions are based on $1
 case "$1" in
@@ -52,6 +56,10 @@ echo "Status posted in reply to $reply."
 else
 echo "Status posted"
 fi
+;;
+"-t" | "--timeline")
+result="$(curl -s -u "$userName:$password" $userNode/api/statuses/user_timeline.xml)"
+echo "$result" | grep -e '^  <text>' -e '^  <created_at>' -e '^  <source>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/^  <created_at>/Posted: /' -e 's/<\/created_at>//' -e  's/^  <source>/From /' -e 's/<\/source>$//' | $PAGER
 ;;
 esac
 exit 0

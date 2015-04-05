@@ -36,13 +36,10 @@ if [ ! -f "$configPath/config" ]; then
     echo "Setup is quick and painless."
     echo
     read -p "Please enter your GNU Social username, This is the part before the @ symble: " userName
-    read -p "Please enter your GNU Social node, This is the part after the @ symble and resimble a web address: " -e -i social.2mb.solutions userNode
-    read -sp "Please enter your GNU Social password. This is optional, but if not included, you will be prompted for it every time you do anything with $clientName: " password
+    read -p "Please enter your GNU Social node: " -e -i social.2mb.solutions userNode
+    read -sp "Please enter your GNU Social password: " password
     echo
-    echo -e "userName=$userName\nuserNode=$userNode" > "$configPath/config"
-    if [ "$password" ]; then
-        echo "password=$password" >> "$configPath/config"
-    fi
+    echo -e "userName=$userName\npassword=$password\nuserNode=$userNode" > "$configPath/config"
     if [ $? -eq 0 ] ; then
         echo "Thanks, setup is now complete. Welcome to $clientName $userName@$userNode."
     fi

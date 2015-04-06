@@ -16,6 +16,7 @@ $clientName -h --help: This help screen.
 $clientName -m --mentions: Read your mensions (replies).
 $clientName -p --post: Post to your node.
 $clientName -t --timeline: Read your timeline.
+$clientName -u --user: Read your statuses only.
 EOF
 }
 
@@ -76,7 +77,11 @@ result="$(curl -s -u "$userName:$password" $userNode/api/statuses/mentions_timel
 echo "$result" | grep -e '^  <text>' -e '^  <created_at>' -e '^  <source>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/^  <created_at>/Posted: /' -e 's/<\/created_at>//' -e  's/^  <source>/From /' -e 's/<\/source>$//' | $PAGER
 ;;
 "-t" | "--timeline" | "")
-result="$(curl -s -u "$userName:$password" $userNode/api/statuses/user_timeline.xml)"
+result="$(curl -s -u "$userName:$password" $userNode/api/statuses/home_timeline.xml)"
+echo "$result" | grep -e '^  <text>' -e '^  <created_at>' -e '^  <source>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/^  <created_at>/Posted: /' -e 's/<\/created_at>//' -e  's/^  <source>/From /' -e 's/<\/source>$//' | $PAGER
+;;
+"-u" | "--user")
+result="$(curl -s -u "$userName:$password" $userNode/api/statuses/home_timeline.xml)"
 echo "$result" | grep -e '^  <text>' -e '^  <created_at>' -e '^  <source>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/^  <created_at>/Posted: /' -e 's/<\/created_at>//' -e  's/^  <source>/From /' -e 's/<\/source>$//' | $PAGER
 ;;
 *)

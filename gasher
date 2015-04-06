@@ -20,6 +20,27 @@ $clientName -u --user: Read your statuses only.
 EOF
 }
 
+# Display information
+display_text()
+{
+# backup IFS
+ifs="$IFS"
+IFS=$'\n'
+createdAt=($(echo "$1" | grep '^  <created_at>' | sed -e 's/^  <created_at>//' -e 's/<\/created_at>$//'))
+name=($(echo "$1" | grep '^   <name>' | sed -e 's/^   <name>//' -e 's/<\/name>$//'))
+source=($(echo "$1" | grep '^  <source>' | sed -e 's/^  <source>//' -e 's/<\/source>$//'))
+text=($(echo "$1" | grep '^  <text>' | sed -e 's/^  <text>//' -e 's/<\/text>$//'))
+#display info
+i=0
+unset pagerText
+while [ $i -lt ${#name[*]} ]; do
+pagerText="${pagerText}${name[$i]}: ${text[$i]}\nPosted: ${createdAt[$i]} from ${source[$i]}\n"
+((i++))
+done
+IFS="$ifs"
+echo -e "$pagerText" | $PAGER
+}
+
 # Set up the configuration directory information
 if [ -z "$XDG_USER_HOME" ]; then
     configPath="$HOME/.config/gasher"
@@ -74,15 +95,15 @@ fi
 ;;
 "-m" | "--mentions")
 result="$(curl -s -u "$userName:$password" $userNode/api/statuses/mentions_timeline.xml)"
-echo "$result" | grep -e '^  <text>' -e '^  <created_at>' -e '^  <source>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/^  <created_at>/Posted: /' -e 's/<\/created_at>//' -e  's/^  <source>/From /' -e 's/<\/source>$//' | $PAGER
+display_text "$result"
 ;;
 "-t" | "--timeline" | "")
 result="$(curl -s -u "$userName:$password" $userNode/api/statuses/home_timeline.xml)"
-echo "$result" | grep -e '^  <text>' -e '^  <created_at>' -e '^  <source>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/^  <created_at>/Posted: /' -e 's/<\/created_at>//' -e  's/^  <source>/From /' -e 's/<\/source>$//' | $PAGER
+display_text "$result"
 ;;
 "-u" | "--user")
 result="$(curl -s -u "$userName:$password" $userNode/api/statuses/home_timeline.xml)"
-echo "$result" | grep -e '^  <text>' -e '^  <created_at>' -e '^  <source>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/^  <created_at>/Posted: /' -e 's/<\/created_at>//' -e  's/^  <source>/From /' -e 's/<\/source>$//' | $PAGER
+display_text "$result"
 ;;
 *)
 show_help

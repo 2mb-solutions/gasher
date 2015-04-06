@@ -12,12 +12,61 @@ For more great stuff, visit http://2mb.solutions
 Solutions at the speed of AWESOME!
 
 Usage:
+$clientName -G --group group+uri: subscribe to the given group.
 $clientName -h --help: This help screen.
 $clientName -m --mentions: Read your mensions (replies).
+$clientName -M --music: automatically post the playing song. Supported clients are cmus, mpd, pianobar, and xmms2. 
 $clientName -p --post: Post to your node.
 $clientName -t --timeline: Read your timeline.
 $clientName -u --user: Read your statuses only.
 EOF
+}
+
+#configure pianobar
+configure_pianobar()
+{
+#remove all old settings
+rm -rf $xdgPath/pianobar &> /dev/null
+# create new directory
+mkdir -p $xdgPath/pianobar &> /dev/null
+#create fifo
+mkfifo $xdgPath/pianobar/ctl &> /dev/null
+read -p "Enter your pandora user name (email address): " pUser
+read -p "Enter your pandora password or leave blank to be prompted each time Pianobar starts: " pPass
+echo "user = $pUser" > "$xdgPath/pianobar/config"
+if [ -n "$pPass" ]; then
+echo "password = $pPass" >> "$xdgPath/pianobar/config"
+fi
+echo "event_command = $xdgPath/eventcmd.sh" >> "$xdgPath/pianobar/config"
+#create eventcmd.sh
+echo '#!/bin/bash
+# create variables
+while read L; do
+k="$(echo "$L" | cut -d "=" -f 1)"
+v="$(echo "$L" | cut -d "=" -f 2)"
+export "$k=$v"
+done < <(grep -e "^\(title\|artist\|album\|stationName\|pRet\|pRetStr\|wRet\|wRetStr\|songDuration\|songPlayed\|rating\|coverArt\|stationCount\|station[0-9]*\)=" /dev/stdin) # don’t overwrite $1…
+album=$(echo "$album" | sed "s/ (Explicit)//g")
+case "$1" in
+"songstart")
+echo "$artist\\$title\\$album" > $HOME/.config/pianobar/nowplaying
+;;
+"songfinish")
+rm $HOME/.config/pianobar/nowplaying
+;;
+"songlove")
+statusText="#NowPlaying \"$title\" by \"$artist\" from \"$album\""
+ttytter -readline=0 -silent -rc=/home/storm/Dropbox/.identicarc -status="$statusText"
+;;
+*)
+if [ "$pRet" -ne 1 ]; then
+echo "$1 failed"
+elif [ "$wRet" -ne 1 ]; then
+echo "$a failed, network error."
+fi
+;;
+esac
+exit 0' > $xdgPath/pianobar/eventcmd.sh
 }
 
 # Display information
@@ -29,7 +78,7 @@ IFS=$'\n'
 createdAt=($(echo "$1" | grep '^  <created_at>' | sed -e 's/^  <created_at>//' -e 's/<\/created_at>$//'))
 name=($(echo "$1" | grep '^   <name>' | sed -e 's/^   <name>//' -e 's/<\/name>$//'))
 source=($(echo "$1" | grep '^  <source>' | sed -e 's/^  <source>//' -e 's/<\/source>$//'))
-text=($(echo "$1" | grep '^  <text>' | sed -e 's/^  <text>//' -e 's/<\/text>$//'))
+text=($(echo "$1" | grep '^  <text>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/&quot;/"/g' -e "s/&apos;/'/g"))
 #display info
 i=0
 unset pagerText
@@ -42,10 +91,12 @@ echo -e "$pagerText" | $PAGER
 }
 
 # Set up the configuration directory information
-if [ -z "$XDG_USER_HOME" ]; then
+if [ -z "$XDG_CONFIG_HOME" ]; then
     configPath="$HOME/.config/gasher"
+xdgPath="$HOME/.config"
 else
-    configPath="$$XDG_UER_HOME/gasher"
+    configPath="$XDG_CONFIG_HOME/gasher"
+    xdgPath="$XDG_CONFIG_HOME"
 fi
 if [ ! -d "$configPath" ]; then
     mkdir -p "$configPath"
@@ -93,9 +144,44 @@ else
 echo "Status posted"
 fi
 ;;
+"-g" | "--group")
+shift
+result="$(curl -s -u "$userName:$password" -d "id=$clientName" -d "uri=$1" $userNode/api/statusnet/groups/join.xml)"
+echo "$result"
+;;
 "-m" | "--mentions")
 result="$(curl -s -u "$userName:$password" $userNode/api/statuses/mentions_timeline.xml)"
 display_text "$result"
+;;
+"-M" | "--music")
+#This is based on currently running music player.
+if pgrep cmus &> /dev/null ; then
+album="$(cmus-remote -Q | sed -n 's/^tag album //p')"
+artist="$(cmus-remote -Q | sed -n 's/^tag artist //p')"
+title="$(cmus-remote -Q | sed -n 's/^tag title //p')"
+elif pgrep mpd &> /dev/null ; then
+album="$(mpc -f %album% current)"
+artist="$(mpc -f %artist% current)"
+title="$(mpc -f %title% current)"
+elif pgrep pianobar &> /dev/null ; then
+if [ -f "$xdgPath/pianobar/nowplaying" ]; then
+album="$(cut -f 3 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
+artist="$(cut -f 1 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
+title="$(cut -f 2 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
+else
+echo "Pianobar is running, but there is no $xdgPath/pianobar/nowplaying file."
+echo "$clientName can configure Pianobar for you, but this will completely overwrite any existing configuration files."
+read -pn1 "Would you like to create a completely new Pianobar configuration? " continue
+if [ "${continue^}" = "Y" ] ; then
+configure_pianobar
+fi
+fi 
+elif pgrep xmms2 &> /dev/null ; then
+album="$(nyxmms2 info | grep album | cut -d '=' -f2- | sed 's/^ //')"
+artist="$(nyxmms2 info | grep artist | cut -d '=' -f2- | sed 's/^ //')"
+title="$(nyxmms2 info | grep title | cut -d '=' -f2- | sed 's/^ //')"
+fi
+$0 -p "#NowPlaying \"$title\" by \"$artist\" from \"$album\" !listening"
 ;;
 "-t" | "--timeline" | "")
 result="$(curl -s -u "$userName:$password" $userNode/api/statuses/home_timeline.xml)"

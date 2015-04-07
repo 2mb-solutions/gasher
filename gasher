@@ -158,15 +158,18 @@ display_text "$result"
 if pgrep cmus &> /dev/null ; then
 album="$(cmus-remote -Q | sed -n 's/^tag album //p')"
 artist="$(cmus-remote -Q | sed -n 's/^tag artist //p')"
+musicPlayer="cmus"
 title="$(cmus-remote -Q | sed -n 's/^tag title //p')"
 elif pgrep mpd &> /dev/null ; then
 album="$(mpc -f %album% current)"
 artist="$(mpc -f %artist% current)"
+musicPlayer="mpd"
 title="$(mpc -f %title% current)"
 elif pgrep pianobar &> /dev/null ; then
 if [ -f "$xdgPath/pianobar/nowplaying" ]; then
 album="$(cut -f 3 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
 artist="$(cut -f 1 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
+musicPlayer="pianobar"
 title="$(cut -f 2 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
 else
 echo "Pianobar is running, but there is no $xdgPath/pianobar/nowplaying file."
@@ -179,9 +182,10 @@ fi
 elif pgrep xmms2 &> /dev/null ; then
 album="$(nyxmms2 info | grep album | cut -d '=' -f2- | sed 's/^ //')"
 artist="$(nyxmms2 info | grep artist | cut -d '=' -f2- | sed 's/^ //')"
+musicPlayer="xmms2"
 title="$(nyxmms2 info | grep title | cut -d '=' -f2- | sed 's/^ //')"
 fi
-$0 -p "#NowPlaying \"$title\" by \"$artist\" from \"$album\" !listening"
+$0 -p "#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer !listening"
 ;;
 "-t" | "--timeline" | "")
 result="$(curl -s -u "$userName:$password" $userNode/api/statuses/home_timeline.xml)"

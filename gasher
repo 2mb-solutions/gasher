@@ -55,8 +55,7 @@ echo "$artist\\$title\\$album" > $HOME/.config/pianobar/nowplaying
 rm $HOME/.config/pianobar/nowplaying
 ;;
 "songlove")
-statusText="#NowPlaying \"$title\" by \"$artist\" from \"$album\""
-ttytter -readline=0 -silent -rc=/home/storm/Dropbox/.identicarc -status="$statusText"
+$0 -M
 ;;
 *)
 if [ "$pRet" -ne 1 ]; then
@@ -67,6 +66,9 @@ fi
 ;;
 esac
 exit 0' > $xdgPath/pianobar/eventcmd.sh
+chmod 700 $xdgPath/pianobar/eventcmd.sh
+echo "Pianobar setup complete. Please restart Pianobar for changes to take effect."
+exit 0
 }
 
 # Display information

@@ -202,8 +202,8 @@ title="$(nyxmms2 info | grep title | cut -d '=' -f2- | sed 's/^ //')"
 fi
 message="#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer !listening"
 if [ "$verify" = "true" ] ; then
-echo "Edit notice or press control+c to abort."
-read -p "$message" -e -i "$message" message
+read -p "Edit message or press control+c to abort:
+" -e -i "$message" message
 fi
 $0 -p "$message"
 message="#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer !listening"

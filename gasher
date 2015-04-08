@@ -37,7 +37,7 @@ echo "user = $pUser" > "$xdgPath/pianobar/config"
 if [ -n "$pPass" ]; then
 echo "password = $pPass" >> "$xdgPath/pianobar/config"
 fi
-echo "event_command = $xdgPath/eventcmd.sh" >> "$xdgPath/pianobar/config"
+echo "event_command = $xdgPath/pianobar/eventcmd.sh" >> "$xdgPath/pianobar/config"
 #create eventcmd.sh
 echo '#!/bin/bash
 # create variables
@@ -66,7 +66,7 @@ fi
 ;;
 esac
 exit 0' > $xdgPath/pianobar/eventcmd.sh
-chmod 700 $xdgPath/pianobar/pianobar/eventcmd.sh
+chmod 700 $xdgPath/pianobar/eventcmd.sh
 echo "Pianobar setup complete. Please restart Pianobar for changes to take effect."
 exit 0
 }

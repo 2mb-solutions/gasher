@@ -168,10 +168,10 @@ artist="$(cmus-remote -Q | sed -n 's/^tag artist //p')"
 musicPlayer="cmus"
 title="$(cmus-remote -Q | sed -n 's/^tag title //p')"
 elif pgrep deadbeef &> /dev/null ; then
-album="$(deadbeef --nowplaying "%b")"
-artist="$(deadbeef --nowplaying "%a")"
+album="$(deadbeef --nowplaying "%b" 2> /dev/null)"
+artist="$(deadbeef --nowplaying "%a" 2> /dev/null)"
 musicPlayer="deadbeef"
-title="$(deadbeef --nowplaying "%t")"
+title="$(deadbeef --nowplaying "%t" 2> /dev/null)"
 elif pgrep mpd &> /dev/null ; then
 album="$(mpc -f %album% current)"
 artist="$(mpc -f %artist% current)"

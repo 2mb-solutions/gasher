@@ -157,11 +157,21 @@ display_text "$result"
 ;;
 "-M" | "--music")
 #This is based on currently running music player.
-if pgrep cmus &> /dev/null ; then
+if pgrep audacious &> /dev/null ; then
+album="$(audtool --current-song-tuple-data album)"
+artist="$(audtool --current-song-tuple-data artist)"
+musicPlayer="audacious"
+title="$(audtool --current-song-tuple-data title)"
+elif pgrep cmus &> /dev/null ; then
 album="$(cmus-remote -Q | sed -n 's/^tag album //p')"
 artist="$(cmus-remote -Q | sed -n 's/^tag artist //p')"
 musicPlayer="cmus"
 title="$(cmus-remote -Q | sed -n 's/^tag title //p')"
+elif pgrep deadbeef &> /dev/null ; then
+album="$(deadbeef --nowplaying "%A")"
+artist="$(deadbeef --nowplaying "%a")"
+musicPlayer="deadbeef"
+title="$(deadbeef --nowplaying "%t")"
 elif pgrep mpd &> /dev/null ; then
 album="$(mpc -f %album% current)"
 artist="$(mpc -f %artist% current)"

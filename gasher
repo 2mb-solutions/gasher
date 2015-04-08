@@ -174,7 +174,7 @@ title="$(cut -f 2 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
 else
 echo "Pianobar is running, but there is no $xdgPath/pianobar/nowplaying file."
 echo "$clientName can configure Pianobar for you, but this will completely overwrite any existing configuration files."
-read -pn1 "Would you like to create a completely new Pianobar configuration? " continue
+read -n1 -p "Would you like to create a completely new Pianobar configuration? " continue
 if [ "${continue^}" = "Y" ] ; then
 configure_pianobar
 fi

@@ -15,7 +15,7 @@ Usage:
 $clientName -G --group group+uri: subscribe to the given group.
 $clientName -h --help: This help screen.
 $clientName -m --mentions: Read your mensions (replies).
-$clientName -M --music: automatically post the playing song. Supported clients are cmus, mpd, pianobar, and xmms2. 
+$clientName -M --music: automatically post the playing song. Supported clients are cmus, mpd, pianobar, and xmms2.  Use -MV or --music-verify to review your status before posting.
 $clientName -p --post: Post to your node.
 $clientName -t --timeline: Read your timeline.
 $clientName -u --user: Read your statuses only.
@@ -155,6 +155,9 @@ echo "$result"
 result="$(curl -s -u "$userName:$password" $userNode/api/statuses/mentions_timeline.xml)"
 display_text "$result"
 ;;
+"-MV" | "-Mv" | "--music-verify")
+verify="true"
+;&
 "-M" | "--music")
 #This is based on currently running music player.
 if pgrep audacious &> /dev/null ; then
@@ -197,7 +200,13 @@ artist="$(nyxmms2 info | grep artist | cut -d '=' -f2- | sed 's/^ //')"
 musicPlayer="xmms2"
 title="$(nyxmms2 info | grep title | cut -d '=' -f2- | sed 's/^ //')"
 fi
-$0 -p "#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer !listening"
+message="#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer !listening"
+if [ "$verify" = "true" ] ; then
+echo "Edit notice or press control+c to abort."
+read -p "$message" -e -i "$message" message
+fi
+$0 -p "$message"
+message="#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer !listening"
 ;;
 "-t" | "--timeline" | "")
 result="$(curl -s -u "$userName:$password" $userNode/api/statuses/home_timeline.xml)"

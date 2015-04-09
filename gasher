@@ -17,6 +17,7 @@ $clientName -h --help: This help screen.
 $clientName -m --mentions: Read your mensions (replies).
 $clientName -M --music: automatically post the playing song. Supported clients are cmus, mpd, pianobar, and xmms2.
 $clientName -p --post: Post to your node.
+$clientName -s --soundclip: Interactively post a soundclip.
 $clientName -t --timeline: Read your timeline.
 $clientName -u --user: Read your statuses only.
 For commands that post a status, add v, V, or -verify to view your status before posting.
@@ -213,6 +214,25 @@ read -p "Edit message or press control+c to abort:
 fi
 $0 -p "$message"
 message="#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer !listening"
+;;
+"-s" | "--soundclip")
+file="$(mktemp -u)"
+echo "Recording... Press control+c when you are finished."
+rec -qV0 "$file.wav"
+sox "$file.wav" "$file.ogg" norm
+rm -f "$file.wav"
+if [ "$verify" = "true" ]; then
+echo "This is your file, press control_c to abort:"
+play -qV0 "$file.ogg" &> /dev/null
+fi
+upload="$(curl -s --form file="@$file.ogg" --form submit=upload http://sndup.net/post.php)"
+    jsonInfo="$(echo "$upload" | sed 's/,/\n/g')"
+fileUrl="$(echo "$jsonInfo" | grep 'url' | sed -e 's/^{"url":"//' -e 's/\/a/\/d/' | tr -d '"\\')"
+rm -f "$file.ogg"
+message="#audio $fileUrl #soundclip"
+read -p "Edit message or press enter to send. Press contrl_c to abort:
+" -e -i "$message" message
+$0 -p "$message"
 ;;
 "-t" | "--timeline" | "")
 result="$(curl -s -u "$userName:$password" $userNode/api/statuses/home_timeline.xml)"

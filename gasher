@@ -221,10 +221,8 @@ echo "Recording... Press control+c when you are finished."
 rec -qV0 "$file.wav"
 sox "$file.wav" "$file.ogg" norm
 rm -f "$file.wav"
-if [ "$verify" = "true" ]; then
-echo "This is your file, press control_c to abort:"
+echo "This is your file, press control+c to skip playback:"
 play -qV0 "$file.ogg" &> /dev/null
-fi
 upload="$(curl -s --form file="@$file.ogg" --form submit=upload http://sndup.net/post.php)"
     jsonInfo="$(echo "$upload" | sed 's/,/\n/g')"
 fileUrl="$(echo "$jsonInfo" | grep 'url' | sed -e 's/^{"url":"//' -e 's/\/a/\/d/' | tr -d '"\\')"

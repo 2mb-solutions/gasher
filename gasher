@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# A note on code formatting. I am blind, and usually only add indention as an after thought.
+#If you want to contribute and need the indention, and feel like fixing it, by all means, feel free to do so.
+#Otherwise, I'll get to it eventually... Maybe.
+
 clientName="${0##*/}"
 clientName="${clientName^}"
 

@@ -15,10 +15,12 @@ Usage:
 $clientName -G --group group+uri: subscribe to the given group.
 $clientName -h --help: This help screen.
 $clientName -m --mentions: Read your mensions (replies).
-$clientName -M --music: automatically post the playing song. Supported clients are cmus, mpd, pianobar, and xmms2.  Use -MV or --music-verify to review your status before posting.
+$clientName -M --music: automatically post the playing song. Supported clients are cmus, mpd, pianobar, and xmms2.
 $clientName -p --post: Post to your node.
 $clientName -t --timeline: Read your timeline.
 $clientName -u --user: Read your statuses only.
+For commands that post a status, add v, V, or -verify to view your status before posting.
+You can then edit the status or press control+c to cancel.
 EOF
 }
 
@@ -130,9 +132,16 @@ fi
 # actions are based on $1
 # Default is -t
 case "$1" in
+*"V" | *"v" | *"-verify")
+verify="true"
+;&
 "-p" | "--post")
 shift
 status="$*"
+if [ "$verify" = "true" ]; then
+read -p "Edit message or press control+c to abort:
+" -e -i "$status" status
+fi
 result="$(curl -s -u "$userName:$password" -d status="$status" -d source="$clientName" $userNode/api/statuses/update.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
@@ -155,9 +164,6 @@ echo "$result"
 result="$(curl -s -u "$userName:$password" $userNode/api/statuses/mentions_timeline.xml)"
 display_text "$result"
 ;;
-"-MV" | "-Mv" | "--music-verify")
-verify="true"
-;&
 "-M" | "--music")
 #This is based on currently running music player.
 if pgrep audacious &> /dev/null ; then

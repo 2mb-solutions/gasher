@@ -134,11 +134,13 @@ PAGER=more
 fi
 
 # actions are based on $1
+action="$1"
 # Default is -t
-case "$1" in
-*"V" | *"v" | *"-verify")
+if echo "$action" | grep -i ".*\(v\)\|\(-verify\)" ; then
 verify="true"
-;&
+action="$(echo "$action" | sed -e 's/-verify//' -e 's/v//i')"
+fi
+case "$action" in
 "-p" | "--post")
 shift
 status="$*"
@@ -224,15 +226,21 @@ echo "Recording... Press control+c when you are finished."
 rec -qV0 "$file.wav"
 sox "$file.wav" "$file.ogg" norm
 rm -f "$file.wav"
+if [ "$verify" = "true" ]; then
+echo
 echo "This is your file, press control+c to skip playback:"
 play -qV0 "$file.ogg" &> /dev/null
+fi
 upload="$(curl -s --form file="@$file.ogg" --form submit=upload http://sndup.net/post.php)"
     jsonInfo="$(echo "$upload" | sed 's/,/\n/g')"
 fileUrl="$(echo "$jsonInfo" | grep 'url' | sed -e 's/^{"url":"//' -e 's/\/a/\/d/' | tr -d '"\\')"
 rm -f "$file.ogg"
 message="#audio $fileUrl #soundclip"
+if [ "$verify" = "true" ]; then
+echo
 read -p "Edit message or press enter to send. Press contrl_c to abort:
 " -e -i "$message" message
+fi
 $0 -p "$message"
 ;;
 "-t" | "--timeline" | "")

@@ -80,15 +80,18 @@ display_text()
 # backup IFS
 ifs="$IFS"
 IFS=$'\n'
+rm -f $configPath/history
 createdAt=($(echo "$1" | grep '^  <created_at>' | sed -e 's/^  <created_at>//' -e 's/<\/created_at>$//'))
 name=($(echo "$1" | grep '^   <name>' | sed -e 's/^   <name>//' -e 's/<\/name>$//'))
 source=($(echo "$1" | grep '^  <source>' | sed -e 's/^  <source>//' -e 's/<\/source>$//'))
 text=($(echo "$1" | grep '^  <text>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/&quot;/"/g' -e "s/&apos;/'/g"))
+uri=($(echo "$1" | grep '^  <uri>tag:' | sed -e 's/^  <uri>tag://' -e 's/<\/uri>$//'))
 #display info
 i=0
 unset pagerText
 while [ $i -lt ${#name[*]} ]; do
-pagerText="${pagerText}${name[$i]}: ${text[$i]}\nPosted: ${createdAt[$i]} from ${source[$i]}\n"
+pagerText="${pagerText}${name[$i]} [$i]: ${text[$i]}\nPosted: ${createdAt[$i]} from ${source[$i]}\n"
+echo "$i=${uri[$i]}" >> $configPath/history
 ((i++))
 done
 IFS="$ifs"

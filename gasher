@@ -12,6 +12,8 @@ For more great stuff, visit http://2mb.solutions
 Solutions at the speed of AWESOME!
 
 Usage:
+$clientName -d --direct-messages: View your direct messages.
+$clientName -D ----post-direct-message recipient message: Send a direct message.
 $clientName -G --group group+uri: subscribe to the given group.
 $clientName -h --help: This help screen.
 $clientName -m --mentions: Read your mensions (replies).
@@ -134,13 +136,38 @@ PAGER=more
 fi
 
 # actions are based on $1
-action="$1"
 # Default is -t
+if [ $# -eq 0 ]; then
+action="--timeline"
+else
+action="$1"
+fi
 if echo "$action" | grep -i ".*\(v\)\|\(-verify\)" ; then
 verify="true"
 action="$(echo "$action" | sed -e 's/-verify//' -e 's/v//i')"
 fi
 case "$action" in
+"-d" | "--direct-messages" | "")
+result="$(curl -s -u "$userName:$password" $userNode/api/statuses/direct_messages_timeline.xml)"
+display_text "$result"
+;;
+"-D" | "--post-direct-message")
+shift
+target="$1"
+shift
+status="$*"
+if [ "$verify" = "true" ]; then
+read -p "Edit direct message to $target or press control+c to abort:
+" -e -i "$status" status
+fi
+result="$(curl -s -u "$userName:$password" -d user="$target" -d text="$status" -d source="$clientName" $userNode/api/direct_messages/new.xml)"
+error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+if [ -n "$error" ]; then
+echo "$error"
+exit 1
+fi
+echo "Message sent."
+;;
 "-p" | "--post")
 shift
 status="$*"
@@ -158,7 +185,7 @@ reply="$(echo "$result" | grep '^ <in_reply_to>' | sed -e 's/<in_reply_to>//' -e
 if [ -n "$reply" ]; then
 echo "Status posted in reply to $reply."
 else
-echo "Status posted"
+echo "Status posted."
 fi
 ;;
 "-g" | "--group")

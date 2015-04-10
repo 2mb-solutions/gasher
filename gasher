@@ -253,6 +253,9 @@ album="$(nyxmms2 info | grep album | cut -d '=' -f2- | sed 's/^ //')"
 artist="$(nyxmms2 info | grep artist | cut -d '=' -f2- | sed 's/^ //')"
 musicPlayer="xmms2"
 title="$(nyxmms2 info | grep title | cut -d '=' -f2- | sed 's/^ //')"
+else
+echo "Sorry, $client name couldn't detect any music information."
+exit 0
 fi
 message="#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer !listening"
 if [ "$verify" = "true" ] ; then

@@ -257,7 +257,14 @@ else
 echo "Sorry, $client name couldn't detect any music information."
 exit 0
 fi
+if [ -n "$album" -a -n "$artist" -a -n "$title" ]; then
 message="#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer !listening"
+elif [ -n "$artist" -a -n "$title" ]; then
+message="#NowPlaying \"$title\" by \"$artist\" via #$musicPlayer !listening"
+else
+echo "Sorry, the current song is either incompletely or improperly tagged. Cannot post."
+exit 0
+fi
 if [ "$verify" = "true" ] ; then
 read -p "Edit message or press control+c to abort:
 " -e -i "$message" message

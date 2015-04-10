@@ -18,6 +18,7 @@ Solutions at the speed of AWESOME!
 Usage:
 $clientName -d --direct-messages: View your direct messages.
 $clientName -D ----post-direct-message recipient message: Send a direct message.
+$clientName -F --follow user_id: follow given user.
 $clientName -G --group group+uri: subscribe to the given group.
 $clientName -h --help: This help screen.
 $clientName -m --mentions: Read your mensions (replies).
@@ -171,6 +172,16 @@ echo "$error"
 exit 1
 fi
 echo "Message sent."
+;;
+"-F" | "--follow")
+shift
+result="$(curl -s -u "$userName:$password" -d screen_name="$1" $userNode/api/friendships/create.xml)"
+error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+if [ -n "$error" ]; then
+echo "$error"
+exit 1
+fi
+echo "You now follow $1."
 ;;
 "-p" | "--post")
 shift

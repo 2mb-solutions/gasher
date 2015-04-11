@@ -16,19 +16,20 @@ For more great stuff, visit http://2mb.solutions
 Solutions at the speed of AWESOME!
 
 Usage:
-$clientName -d --direct-messages: View your direct messages.
-$clientName -D ----post-direct-message recipient message: Send a direct message.
-$clientName -F --follow user_id: follow given user.
-$clientName -G --group group+uri: subscribe to the given group.
-$clientName -h --help: This help screen.
-$clientName -m --mentions: Read your mensions (replies).
-$clientName -M --music: automatically post the playing song. Supported clients are cmus, mpd, pianobar, and xmms2.
-$clientName -p --post: Post to your node.
-$clientName -s --soundclip: Interactively post a soundclip.
-$clientName -t --timeline: Read your timeline.
-$clientName -u --user: Read your statuses only.
+$0 -d --direct-messages: View your direct messages.
+$0 -D ----post-direct-message recipient message: Send a direct message.
+$0 -F --follow user_id: follow given user.
+$0 -G --group group+uri: subscribe to the given group.
+$0 -h --help: This help screen.
+$0 -m --mentions: Read your mensions (replies).
+$0 -M --music: automatically post the playing song. Supported clients are cmus, mpd, pianobar, and xmms2.
+$0 -p --post: Post to your node.
+$0 -s --soundclip: Interactively post a soundclip.
+$0 -t --timeline: Read your timeline.
+$0 -u --user: Read your statuses only.
 For commands that post a status, add v, V, or -verify to view your status before posting.
 You can then edit the status or press control+c to cancel.
+When requesting statuses, add a number to specify how many to retrieve. for example to see the last three items in your timeline, type $0 -t3
 EOF
 }
 
@@ -208,8 +209,12 @@ shift
 result="$(curl -s -u "$userName:$password" -d "id=$clientName" -d "uri=$1" $userNode/api/statusnet/groups/join.xml)"
 echo "$result"
 ;;
-"-m" | "--mentions")
-result="$(curl -s -u "$userName:$password" $userNode/api/statuses/mentions_timeline.xml)"
+"-m"* | "--mentions"*)
+count=$(echo "$action" | tr -cd "[:digit:]")
+if [ -z "$count" ]; then
+count=20
+fi
+result="$(curl -s -u "$userName:$password" -d count="$count" $userNode/api/statuses/mentions_timeline.xml)"
 display_text "$result"
 ;;
 "-M" | "--music")
@@ -295,12 +300,20 @@ read -p "Edit message or press enter to send. Press contrl_c to abort:
 fi
 $0 -p "$message"
 ;;
-"-t" | "--timeline" | "")
-result="$(curl -s -u "$userName:$password" $userNode/api/statuses/home_timeline.xml)"
+"-t"* | "--timeline"*)
+count=$(echo "$action" | tr -cd "[:digit:]")
+if [ -z "$count" ]; then
+count=20
+fi
+result="$(curl -s -u "$userName:$password" -d count="$count" $userNode/api/statuses/home_timeline.xml)"
 display_text "$result"
 ;;
-"-u" | "--user")
-result="$(curl -s -u "$userName:$password" $userNode/api/statuses/home_timeline.xml)"
+"-u"* | "--user"*)
+count=$(echo "$action" | tr -cd "[:digit:]")
+if [ -z "$count" ]; then
+count=20
+fi
+result="$(curl -s -u "$userName:$password" -d count="$count" $userNode/api/statuses/home_timeline.xml)"
 display_text "$result"
 ;;
 *)

@@ -24,6 +24,7 @@ $0 -h --help: This help screen.
 $0 -m --mentions: Read your mensions (replies).
 $0 -M --music: automatically post the playing song. Supported clients are cmus, mpd, pianobar, and xmms2.
 $0 -p --post: Post to your node.
+$0 -r --reply number: reply to someone. Number is the number in brackets after their name.
 $0 -s --soundclip: Interactively post a soundclip.
 $0 -t --timeline: Read your timeline.
 $0 -u --user: Read your statuses only.
@@ -91,15 +92,17 @@ IFS=$'\n'
 rm -f $configPath/history
 createdAt=($(echo "$1" | grep '^  <created_at>' | sed -e 's/^  <created_at>//' -e 's/<\/created_at>$//'))
 name=($(echo "$1" | grep '^   <name>' | sed -e 's/^   <name>//' -e 's/<\/name>$//'))
+screenName=($(echo "$1" | grep '^   <screen_name>' | sed -e 's/^   <screen_name>//' -e 's/<\/screen_name>$//'))
 source=($(echo "$1" | grep '^  <source>' | sed -e 's/^  <source>//' -e 's/<\/source>$//'))
 text=($(echo "$1" | grep '^  <text>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/&quot;/"/g' -e "s/&apos;/'/g"))
 uri=($(echo "$1" | grep '^  <uri>tag:' | sed -e 's/^  <uri>tag://' -e 's/<\/uri>$//'))
+statusId=($(echo "$1" | grep '^  <id>' | sed -e 's/^  <id>//' -e 's/<\/id>$//'))
 #display info
 i=0
 unset pagerText
 while [ $i -lt ${#name[*]} ]; do
 pagerText="${pagerText}${name[$i]} [$i]: ${text[$i]}\nPosted: ${createdAt[$i]} from ${source[$i]}\n"
-echo "$i=${uri[$i]}" >> $configPath/history
+echo "$i=${uri[$i]}:name=${screenName[$i]}:reply_id=${statusId[$i]}" >> $configPath/history
 ((i++))
 done
 IFS="$ifs"
@@ -186,12 +189,12 @@ echo "You now follow $1."
 ;;
 "-p" | "--post")
 shift
-status="$*"
+message="$*"
 if [ "$verify" = "true" ]; then
 read -p "Edit message or press control+c to abort:
-" -e -i "$status" status
+" -e -i "$message" message
 fi
-result="$(curl -s -u "$userName:$password" -d status="$status" -d source="$clientName" $userNode/api/statuses/update.xml)"
+result="$(curl -s -u "$userName:$password" -d status="$message" -d source="$clientName" $userNode/api/statuses/update.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
 echo "$error"
@@ -276,6 +279,42 @@ read -p "Edit message or press control+c to abort:
 fi
 $0 -p "$message"
 message="#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer !listening"
+;;
+"-r"* | "--reply"*)
+shift
+target="$1"
+shift
+if ! [[ "$target" =~ ^[0-9]+$ ]]; then
+echo "Reply target must be a number. It's the number in brackets just after the name."
+exit 0
+fi
+in_reply_to="$(grep "^$target" "$configPath/history" | cut -d '=' -f6)"
+if [ -z "$in_reply_to" ]; then
+echo "Reply code not found."
+exit 0
+fi
+name="$(grep "^$target" "$configPath/history" | cut -d '=' -f5 | cut -d ':' -f1)"
+name="${name}@$(grep "^$target" "$configPath/history" | cut -d '=' -f2 | cut -d ',' -f1)"
+if echo "$name" | grep "$userNode" &> /dev/null ; then
+name="$(echo "$name" | cut -d '@' -f1)"
+fi
+message=" @$name $*"
+if [ "$verify" = "true" ] ; then
+read -p "Edit message or press control+c to abort:
+" -e -i "$message" message
+fi
+result="$(curl -s -u "$userName:$password" -d status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" $userNode/api/statuses/update.xml)"
+error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+if [ -n "$error" ]; then
+echo "$error"
+exit 1
+fi
+reply="$(echo "$result" | grep '^ <in_reply_to>' | sed -e 's/<in_reply_to>//' -e 's/<\/in_reply_to>//' -e 's/^ //')"
+if [ -n "$reply" ]; then
+echo "Status posted in reply to $reply."
+else
+echo "Status posted."
+fi
 ;;
 "-s" | "--soundclip")
 file="$(mktemp -u)"

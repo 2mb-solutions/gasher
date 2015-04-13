@@ -17,12 +17,14 @@ Solutions at the speed of AWESOME!
 
 Usage:
 $0 -d --direct-messages: View your direct messages.
-$0 -D ----post-direct-message recipient message: Send a direct message.
+$0 -D --post-direct-message recipient message: Send a direct message.
 $0 -F --follow user_id: follow given user.
 $0 -G --group group+uri: subscribe to the given group.
 $0 -h --help: This help screen.
 $0 -m --mentions: Read your mensions (replies).
 $0 -M --music: automatically post the playing song. Supported clients are cmus, mpd, pianobar, and xmms2.
+$0 -n --notify: Notify you of new activity. You can add rate=seconds to the config file. The default is 300 (5 minutes).
+Add an & to send the process to the background
 $0 -p --post: Post to your node.
 $0 -r --reply number: reply to someone. Number is the number in brackets after their name.
 $0 -s --soundclip: Interactively post a soundclip.
@@ -30,7 +32,8 @@ $0 -t --timeline: Read your timeline.
 $0 -u --user: Read your statuses only.
 For commands that post a status, add v, V, or -verify to view your status before posting.
 You can then edit the status or press control+c to cancel.
-When requesting statuses, add a number to specify how many to retrieve. for example to see the last three items in your timeline, type $0 -t3
+When requesting statuses, add a number to specify how many to retrieve. for example to see the last three items in your
+timeline, type $0 -t3
 EOF
 }
 
@@ -279,6 +282,20 @@ read -p "Edit message or press control+c to abort:
 fi
 $0 -p "$message"
 message="#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer !listening"
+;;
+"-n" | "--notify")
+if ! [[ "$rate" =~ ^[0-9]+$ ]]; then
+rate=300
+fi
+while :; do
+oldId="$(head -n1 "$configPath/history" | cut -d '=' -f6)"
+newId="$(curl -s -u "$userName:$password" -d count="1" $userNode/api/statuses/home_timeline.xml | grep '^  <id>' | tr -cd "[:digit:]")"
+echo "old is $oldId and new is $newId"
+if [ $oldId -ne $newId ]; then
+play -nqV0 synth pl C2 pl C3 pl E2 pl E3 pl G2 pl G3 pl C4 pl C5 pl E4 pl E5 pl G4 pl G5 delay 0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 fade h 0 2.5 1.5 remix - flanger norm -4 &> /dev/null
+fi
+sleep $rate
+done
 ;;
 "-r"* | "--reply"*)
 shift

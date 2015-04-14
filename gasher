@@ -36,6 +36,7 @@ For commands that post a status, add v, V, or -verify to view your status before
 You can then edit the status or press control+c to cancel.
 When requesting statuses, add a number to specify how many to retrieve. for example to see the last three items in your
 timeline, type $0 -t3
+When entering your password during setup, If the password contains a space, put quotes around it, like "pass word".
 EOF
 }
 

@@ -317,8 +317,7 @@ fi
 while :; do
 oldId="$(head -n1 "$configPath/history" | rev | cut -d '=' -f1 | rev)"
 newId="$(curl -s -u "$userName:$password" -d count="1" $userNode/api/statuses/home_timeline.xml | grep '^  <id>' | tr -cd "[:digit:]")"
-echo "Old is $oldId and new is $newId"
-if [ $oldId != $newId ]; then
+if [ $oldId -ne $newId ]; then
 play -nqV0 synth pl C2 pl C3 pl E2 pl E3 pl G2 pl G3 pl C4 pl C5 pl E4 pl E5 pl G4 pl G5 delay 0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 fade h 0 2.5 1.5 remix - flanger 0 5 chorus 0.25 0.15 100 0.99 0.1 9.9 -s norm &> /dev/null
 fi
 sleep $rate

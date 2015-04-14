@@ -16,9 +16,11 @@ For more great stuff, visit http://2mb.solutions
 Solutions at the speed of AWESOME!
 
 Usage:
+$0 -a --account name: Use config file $configPath/config.name. Useful if you have multiple accounts.
 $0 -d --direct-messages: View your direct messages.
 $0 -D --post-direct-message recipient message: Send a direct message.
-$0 -F --follow user_id: follow given user.
+$0 -F --favorite status_code: Favorite the notice with the code you chose. The codes are in the brackets just after the name.
+$0 -f --follow user_id: follow given user.
 $0 -G --group group+uri: subscribe to the given group.
 $0 -h --help: This help screen.
 $0 -m --mentions: Read your mensions (replies).
@@ -141,10 +143,18 @@ if [ ! -f "$configPath/config" ]; then
 fi
 
 # read settings
-source "$configPath/config"
+case "$1" in
+"-a" | "--account")
+    shift
+    source "$configPath/config.$1"
+    shift
+esac
+if [ -z "$userName" ]; then
+    source "$configPath/config"
+fi
 # Pager is set here, to allow the PAGER variable to be set in either invironment or gasher's config
 if [ -z "$PAGER" ]; then
-PAGER=more
+    PAGER=more
 fi
 
 # actions are based on $1
@@ -180,7 +190,7 @@ exit 1
 fi
 echo "Message sent."
 ;;
-"-F" | "--follow")
+"-f" | "--follow")
 shift
 result="$(curl -s -u "$userName:$password" -d screen_name="$1" $userNode/api/friendships/create.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
@@ -189,6 +199,27 @@ echo "$error"
 exit 1
 fi
 echo "You now follow $1."
+;;
+"-F" | "--favorite")
+shift
+target="$1"
+shift
+if ! [[ "$target" =~ ^[0-9]+$ ]]; then
+echo "Reply target must be a number. It's the number in brackets just after the name."
+exit 0
+fi
+id="$(grep "^$target" "$configPath/history" | cut -d '=' -f6)"
+if [ -z "$id" ]; then
+echo "Favorite code not found."
+exit 0
+fi
+result="$(curl -s -u "$userName:$password" -d id="$id" $userNode/api/favorites/create.xml)"
+error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+if [ -n "$error" ]; then
+echo "$error"
+exit 1
+fi
+echo "Notice $id favorited."
 ;;
 "-p" | "--post")
 shift
@@ -203,12 +234,7 @@ if [ -n "$error" ]; then
 echo "$error"
 exit 1
 fi
-reply="$(echo "$result" | grep '^ <in_reply_to>' | sed -e 's/<in_reply_to>//' -e 's/<\/in_reply_to>//' -e 's/^ //')"
-if [ -n "$reply" ]; then
-echo "Status posted in reply to $reply."
-else
-echo "Status posted."
-fi
+echo "Notice posted."
 ;;
 "-g" | "--group")
 shift
@@ -325,12 +351,7 @@ if [ -n "$error" ]; then
 echo "$error"
 exit 1
 fi
-reply="$(echo "$result" | grep '^ <in_reply_to>' | sed -e 's/<in_reply_to>//' -e 's/<\/in_reply_to>//' -e 's/^ //')"
-if [ -n "$reply" ]; then
-echo "Status posted in reply to $reply."
-else
-echo "Status posted."
-fi
+echo "Comment posted in reply to $name."
 ;;
 "-s" | "--soundclip")
 file="$(mktemp -u)"

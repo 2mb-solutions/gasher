@@ -139,7 +139,9 @@ if [ ! -f "$configPath/config" ]; then
     read -p "Post music to a group? You need to subscribe to the group for this to work: " -e -i listening musicGroup
     echo
     echo -e "userName=${userName}\npassword=${password}\nuserNode=${userNode}" > "$configPath/config"
-echo "musicGroup=$musicGroup}" >> "$configPath/config"
+    if [ -n "$musicGroup" ] ; then
+        echo "musicGroup=${musicGroup}" >> "$configPath/config"
+    fi
     if [ $? -eq 0 ] ; then
         echo "Thanks, setup is now complete. Welcome to $clientName $userName@$userNode."
     fi
@@ -305,7 +307,7 @@ else
 echo "Sorry, the current song is either incompletely or improperly tagged. Cannot post."
 exit 0
 fi
-if [ -n "musicGroup" ] ; then
+if [ -n "$musicGroup" ] ; then
 message="${message} !${musicGroup}"
 fi
 if [ "$verify" = "true" ] ; then

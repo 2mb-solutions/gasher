@@ -136,8 +136,10 @@ if [ ! -f "$configPath/config" ]; then
     read -p "Please enter your GNU Social username, This is the part before the @ symble: " userName
     read -p "Please enter your GNU Social node: " -e -i social.2mb.solutions userNode
     read -sp "Please enter your GNU Social password: " password
+    read -p "Post music to a group? You need to subscribe to the group for this to work: " -e -i listening musicGroup
     echo
-    echo -e "userName=$userName\npassword=$password\nuserNode=$userNode" > "$configPath/config"
+    echo -e "userName=${userName}\npassword=${password}\nuserNode=${userNode}" > "$configPath/config"
+echo "musicGroup=$musicGroup}" >> "$configPath/config"
     if [ $? -eq 0 ] ; then
         echo "Thanks, setup is now complete. Welcome to $clientName $userName@$userNode."
     fi
@@ -296,12 +298,15 @@ echo "Sorry, $client name couldn't detect any music information."
 exit 0
 fi
 if [ -n "$album" -a -n "$artist" -a -n "$title" ]; then
-message="#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer !listening"
+message="#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer"
 elif [ -n "$artist" -a -n "$title" ]; then
-message="#NowPlaying \"$title\" by \"$artist\" via #$musicPlayer !listening"
+message="#NowPlaying \"$title\" by \"$artist\" via #$musicPlayer"
 else
 echo "Sorry, the current song is either incompletely or improperly tagged. Cannot post."
 exit 0
+fi
+if [ -n "musicGroup" ] ; then
+message="${message} !${musicGroup}"
 fi
 if [ "$verify" = "true" ] ; then
 read -p "Edit message or press control+c to abort:

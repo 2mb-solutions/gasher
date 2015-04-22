@@ -29,6 +29,7 @@ $0 -n --notify: Notify you of new activity. You can add rate=seconds to the conf
 Add an & to send the process to the background
 $0 -p --post: Post to your node.
 $0 -r --reply number: reply to someone. Number is the number in brackets after their name.
+$0 -R --repeat status_code: Repeat the notice with the code you chose. The codes are in the brackets just after the name.
 $0 -s --soundclip: Interactively post a soundclip.
 $0 -t --timeline: Read your timeline.
 $0 -u --user: Read your statuses only.
@@ -361,6 +362,27 @@ echo "$error"
 exit 1
 fi
 echo "Comment posted in reply to $name."
+;;
+"-R" | "--repeat")
+shift
+target="$1"
+shift
+if ! [[ "$target" =~ ^[0-9]+$ ]]; then
+echo "Reply target must be a number. It's the number in brackets just after the name."
+exit 0
+fi
+id="$(grep "^$target" "$configPath/history" | rev | cut -d '=' -f1 | rev)"
+if [ -z "$id" ]; then
+echo "Favorite code not found."
+exit 0
+fi
+result="$(curl -s -u "$userName:$password" -d id="$id" -d source="$clientName" $userNode/api/statuses/retweet/${target}.xml)"
+error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+if [ -n "$error" ]; then
+echo "$error"
+exit 1
+fi
+echo "Notice $id repeated."
 ;;
 "-s" | "--soundclip")
 file="$(mktemp -u)"

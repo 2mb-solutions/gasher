@@ -102,7 +102,7 @@ name=($(echo "$1" | grep '^   <name>' | sed -e 's/^   <name>//' -e 's/<\/name>$/
 screenName=($(echo "$1" | grep '^   <screen_name>' | sed -e 's/^   <screen_name>//' -e 's/<\/screen_name>$//'))
 source=($(echo "$1" | grep '^  <source>' | sed -e 's/^  <source>//' -e 's/<\/source>$//'))
 text=($(echo "$1" | grep '^  <text>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/&quot;/"/g' -e "s/&apos;/'/g"))
-uri=($(echo "$1" | grep '^  <uri>tag:' | sed -e 's/^  <uri>tag://' -e 's/<\/uri>$//'))
+uri=($(echo "$1" | grep '^  <uri>tag:' | sed -e 's/^  <uri>tag://' -e 's/<\/uri>$//' | cut -d ',' -f1))
 statusId=($(echo "$1" | grep '^  <id>' | sed -e 's/^  <id>//' -e 's/<\/id>$//'))
 #display info
 i=0
@@ -176,7 +176,7 @@ action="$(echo "$action" | sed -e 's/-verify//' -e 's/v//i')"
 fi
 case "$action" in
 "-d" | "--direct-messages" | "")
-result="$(curl -s -u "$userName:$password" $userNode/api/statuses/direct_messages_timeline.xml)"
+result="$(curl -s -u "$userName:$password" $userNode/api/statuses/direct_messages/show.xml)"
 display_text "$result"
 ;;
 "-D" | "--post-direct-message")
@@ -214,7 +214,7 @@ if ! [[ "$target" =~ ^[0-9]+$ ]]; then
 echo "Reply target must be a number. It's the number in brackets just after the name."
 exit 0
 fi
-id="$(grep "^$target" "$configPath/history" | rev | cut -d '=' -f1 | rev)"
+id="$(grep "^$target" "$configPath/history" | cut -d '=' -f4)"
 if [ -z "$id" ]; then
 echo "Favorite code not found."
 exit 0
@@ -340,13 +340,13 @@ if ! [[ "$target" =~ ^[0-9]+$ ]]; then
 echo "Reply target must be a number. It's the number in brackets just after the name."
 exit 0
 fi
-in_reply_to="$(grep "^$target" "$configPath/history" | rev | cut -d '=' -f1 | rev)"
+in_reply_to="$(grep -m1 "^$target" "$configPath/history" | cut -d '=' -f4)"
 if [ -z "$in_reply_to" ]; then
 echo "Reply code not found."
 exit 0
 fi
-name="$(grep "^$target" "$configPath/history" | cut -d '=' -f5 | cut -d ':' -f1)"
-name="${name}@$(grep "^$target" "$configPath/history" | cut -d '=' -f2 | cut -d ',' -f1)"
+name="$(grep -m1 "^$target" "$configPath/history" | cut -d '=' -f3 | cut -d ':' -f1)"
+name="${name}@$(grep "^$target" "$configPath/history" | cut -d '=' -f2 | cut -d ':' -f1)"
 if echo "$name" | grep "$userNode" &> /dev/null ; then
 name="$(echo "$name" | cut -d '@' -f1)"
 fi
@@ -371,7 +371,7 @@ if ! [[ "$target" =~ ^[0-9]+$ ]]; then
 echo "Reply target must be a number. It's the number in brackets just after the name."
 exit 0
 fi
-id="$(grep "^$target" "$configPath/history" | rev | cut -d '=' -f1 | rev)"
+id="$(grep "^$target" "$configPath/history" | cut -d '=' -f4)"
 if [ -z "$id" ]; then
 echo "Favorite code not found."
 exit 0

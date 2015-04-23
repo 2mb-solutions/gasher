@@ -28,6 +28,7 @@ $0 -M --music: automatically post the playing song. Supported clients are cmus, 
 $0 -n --notify: Notify you of new activity. You can add rate=seconds to the config file. The default is 300 (5 minutes).
 Add an & to send the process to the background
 $0 -p --post: Post to your node.
+$0 -Q --quote status_code text: Repeat a notice with your own text added. Type %qt% where you want the original text to appear.
 $0 -r --reply number: reply to someone. Number is the number in brackets after their name.
 $0 -R --repeat status_code: Repeat the notice with the code you chose. The codes are in the brackets just after the name.
 $0 -s --soundclip: Interactively post a soundclip.
@@ -331,6 +332,40 @@ oldId=$newId
 fi
 sleep $rate
 done
+;;
+"-Q"* | "--quote"*)
+shift
+target="$1"
+shift
+if ! [[ "$target" =~ ^[0-9]+$ ]]; then
+echo "Quote target must be a number. It's the number in brackets just after the name."
+exit 0
+fi
+in_reply_to="$(grep -m1 "^$target" "$configPath/history" | cut -d '=' -f4)"
+if [ -z "$in_reply_to" ]; then
+echo "Quote code not found."
+exit 0
+fi
+name="$(grep -m1 "^$target" "$configPath/history" | cut -d '=' -f3 | cut -d ':' -f1)"
+name="${name}@$(grep "^$target" "$configPath/history" | cut -d '=' -f2 | cut -d ':' -f1)"
+if echo "$name" | grep "$userNode" &> /dev/null ; then
+name="$(echo "$name" | cut -d '@' -f1)"
+fi
+message="$*"
+quote="QT @$name "
+quote="${quote}$(curl -s -u "$userName:$password" "${userNode}/api/statuses/show.xml?id=${in_reply_to}" | grep '^ <text>' | sed -e 's/^ <text>//' -e 's/<\/text>$//')"
+if [ "$verify" = "true" ] ; then
+read -p "Edit message or press control+c to abort. %qt% will be replaced with the message you want to quote:
+" -e -i "$message" message
+fi
+message="$(echo "$message" | sed "s/%qt%/$quote/gi")"
+result="$(curl -s -u "$userName:$password" -d status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" $userNode/api/statuses/update.xml)"
+error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+if [ -n "$error" ]; then
+echo "$error"
+exit 1
+fi
+echo "Notice posted containing quote from $name."
 ;;
 "-r"* | "--reply"*)
 shift

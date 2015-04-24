@@ -301,10 +301,19 @@ else
 echo "Sorry, $client name couldn't detect any music information."
 exit 0
 fi
+if [ "$album" = "${album/ /}" ]; then
+album="#$album"
+fi
+if [ "$artist" = "${artist/ /}" ]; then
+artist="#$artist"
+fi
+if [ "$title" = "${title/ /}" ]; then
+title="#$title"
+fi
 if [ -n "$album" -a -n "$artist" -a -n "$title" ]; then
-message="#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer"
+message="#NowPlaying $title by $artist from $album via #$musicPlayer"
 elif [ -n "$artist" -a -n "$title" ]; then
-message="#NowPlaying \"$title\" by \"$artist\" via #$musicPlayer"
+message="#NowPlaying $title by $artist via #$musicPlayer"
 else
 echo "Sorry, the current song is either incompletely or improperly tagged. Cannot post."
 exit 0

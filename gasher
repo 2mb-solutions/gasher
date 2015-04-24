@@ -355,8 +355,8 @@ if [ -z "$in_reply_to" ]; then
 echo "Quote code not found."
 exit 0
 fi
-name="$(grep -m1 "^$target" "$configPath/history" | cut -d '=' -f3 | cut -d ':' -f1)"
-name="${name}@$(grep "^$target" "$configPath/history" | cut -d '=' -f2 | cut -d ':' -f1)"
+name="$(grep -m1 "^$target=" "$configPath/history" | cut -d '=' -f3 | cut -d ':' -f1)"
+name="${name}@$(grep "^$target=" "$configPath/history" | cut -d '=' -f2 | cut -d ':' -f1)"
 if echo "$name" | grep "$userNode" &> /dev/null ; then
 name="$(echo "$name" | cut -d '@' -f1)"
 fi
@@ -389,8 +389,8 @@ if [ -z "$in_reply_to" ]; then
 echo "Reply code not found."
 exit 0
 fi
-name="$(grep -m1 "^$target" "$configPath/history" | cut -d '=' -f3 | cut -d ':' -f1)"
-name="${name}@$(grep "^$target" "$configPath/history" | cut -d '=' -f2 | cut -d ':' -f1)"
+name="$(grep -m1 "^$target=" "$configPath/history" | cut -d '=' -f3 | cut -d ':' -f1)"
+name="${name}@$(grep "^$target=" "$configPath/history" | cut -d '=' -f2 | cut -d ':' -f1)"
 if echo "$name" | grep "$userNode" &> /dev/null ; then
 name="$(echo "$name" | cut -d '@' -f1)"
 fi
@@ -415,7 +415,7 @@ if ! [[ "$target" =~ ^[0-9]+$ ]]; then
 echo "Reply target must be a number. It's the number in brackets just after the name."
 exit 0
 fi
-id="$(grep "^$target" "$configPath/history" | cut -d '=' -f4)"
+id="$(grep "^$target=" "$configPath/history" | cut -d '=' -f4)"
 if [ -z "$id" ]; then
 echo "Favorite code not found."
 exit 0

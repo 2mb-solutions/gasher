@@ -149,6 +149,15 @@ if [ ! -f "$configPath/config" ]; then
     fi
 fi
 
+notify()
+{
+    if [ $gui ]; then
+        $gui --notification --timeout 5 --image=update.png --text "$*"
+    else
+        echo "$*"
+    fi
+}
+
 # read settings
 case "$1" in
 "-a" | "--account")
@@ -162,6 +171,14 @@ fi
 # Pager is set here, to allow the PAGER variable to be set in either invironment or gasher's config
 if [ -z "$PAGER" ]; then
     PAGER=more
+fi
+
+# Find out if we have GUI capabilities
+unset gui
+if [[ -n "$COLORTERM" ]]; then
+    if hash yad &> /dev/null ; then
+        gui="$(which yad)"
+    fi
 fi
 
 # actions are based on $1
@@ -192,17 +209,17 @@ fi
 result="$(curl -s -u "$userName:$password" -d user="$target" -d text="$status" -d source="$clientName" $userNode/api/direct_messages/new.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
-echo "$error"
+notify "$error"
 exit 1
 fi
-echo "Message sent."
+notify "Message sent."
 ;;
 "-f" | "--follow")
 shift
 result="$(curl -s -u "$userName:$password" -d screen_name="$1" $userNode/api/friendships/create.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
-echo "$error"
+notify "$error"
 exit 1
 fi
 echo "You now follow $1."
@@ -223,25 +240,29 @@ fi
 result="$(curl -s -u "$userName:$password" -d id="$id" $userNode/api/favorites/create.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
-echo "$error"
+notify "$error"
 exit 1
 fi
-echo "Notice $id favorited."
+notify "Notice $id favorited."
 ;;
 "-p" | "--post")
 shift
+if [ -n "$gui" -a $# -eq 0 ]; then
+message="$($gui --entry --title "$clientName" --entry-label "Share your status:")"
+else
 message="$*"
 if [ "$verify" = "true" ]; then
 read -p "Edit message or press control+c to abort:
 " -e -i "$message" message
 fi
+fi
 result="$(curl -s -u "$userName:$password" -d status="$message" -d source="$clientName" $userNode/api/statuses/update.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
-echo "$error"
+notify "$error"
 exit 1
 fi
-echo "Notice posted."
+notify "Notice posted."
 ;;
 "-g" | "--group")
 shift
@@ -298,7 +319,7 @@ artist="$(nyxmms2 info | grep artist | cut -d '=' -f2- | sed 's/^ //')"
 musicPlayer="xmms2"
 title="$(nyxmms2 info | grep title | cut -d '=' -f2- | sed 's/^ //')"
 else
-echo "Sorry, $client name couldn't detect any music information."
+notify "Sorry, $client name couldn't detect any music information."
 exit 0
 fi
 if [ "$album" = "${album/ /}" ]; then
@@ -315,7 +336,7 @@ message="#NowPlaying $title by $artist from $album via #$musicPlayer"
 elif [ -n "$artist" -a -n "$title" ]; then
 message="#NowPlaying $title by $artist via #$musicPlayer"
 else
-echo "Sorry, the current song is either incompletely or improperly tagged. Cannot post."
+notify "Sorry, the current song is either incompletely or improperly tagged. Cannot post."
 exit 0
 fi
 if [ -n "$musicGroup" ] ; then
@@ -371,10 +392,10 @@ message="$(echo "$message" | sed "s/%qt%/$quote/gi")"
 result="$(curl -s -u "$userName:$password" -d status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" $userNode/api/statuses/update.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
-echo "$error"
+notify "$error"
 exit 1
 fi
-echo "Notice posted containing quote from $name."
+notify "Notice posted containing quote from $name."
 ;;
 "-r"* | "--reply"*)
 shift
@@ -402,10 +423,10 @@ fi
 result="$(curl -s -u "$userName:$password" -d status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" $userNode/api/statuses/update.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
-echo "$error"
+notify "$error"
 exit 1
 fi
-echo "Comment posted in reply to $name."
+notify "Comment posted in reply to $name."
 ;;
 "-R" | "--repeat")
 shift
@@ -423,10 +444,10 @@ fi
 result="$(curl -s -u "$userName:$password" -d id="$id" -d source="$clientName" $userNode/api/statuses/retweet/${target}.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
-echo "$error"
+notify "$error"
 exit 1
 fi
-echo "Notice $id repeated."
+notify "Notice $id repeated."
 ;;
 "-s" | "--soundclip")
 file="$(mktemp -u)"

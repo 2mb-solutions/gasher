@@ -102,7 +102,7 @@ createdAt=($(echo "$1" | grep '^  <created_at>' | sed -e 's/^  <created_at>//' -
 name=($(echo "$1" | grep '^   <name>' | sed -e 's/^   <name>//' -e 's/<\/name>$//'))
 screenName=($(echo "$1" | grep '^   <screen_name>' | sed -e 's/^   <screen_name>//' -e 's/<\/screen_name>$//'))
 source=($(echo "$1" | grep '^  <source>' | sed -e 's/^  <source>//' -e 's/<\/source>$//'))
-text=($(echo "$1" | grep '^  <text>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/&quot;/"/g' -e "s/&apos;/'/g"))
+text=($(echo "$1" | grep '^  <text>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/&quot;/"/g' -e "s/&apos;/'/g" -e 's/&gt;/>/g' -e 's/lt/</g'))
 uri=($(echo "$1" | grep '^  <uri>tag:' | sed -e 's/^  <uri>tag://' -e 's/<\/uri>$//' | cut -d ',' -f1))
 statusId=($(echo "$1" | grep '^  <id>' | sed -e 's/^  <id>//' -e 's/<\/id>$//'))
 #display info

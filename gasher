@@ -175,7 +175,7 @@ fi
 
 # Find out if we have GUI capabilities
 unset gui
-if [[ -n "$COLORTERM" ]]; then
+if [[ -n "$DISPLAY" ]]; then
     if hash yad &> /dev/null ; then
         gui="$(which yad)"
     fi

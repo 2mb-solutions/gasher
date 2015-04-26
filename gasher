@@ -152,7 +152,7 @@ fi
 notify()
 {
     if [ $gui ]; then
-        $gui --notification --timeout 5 --image=update.png --text "$*"
+        $gui --notification --timeout 5 --selectable-labels --text "$*"
     else
         echo "$*"
     fi

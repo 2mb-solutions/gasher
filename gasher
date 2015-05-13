@@ -172,6 +172,10 @@ fi
 if [ -z "$PAGER" ]; then
     PAGER=more
 fi
+#set default curl options:
+if [ -z "$curlOpts" ]; then
+curlOpts="-s"
+fi
 
 # Find out if we have GUI capabilities
 unset gui
@@ -194,7 +198,7 @@ action="$(echo "$action" | sed -e 's/-verify//' -e 's/v//i')"
 fi
 case "$action" in
 "-d" | "--direct-messages" | "")
-result="$(curl -s -u "$userName:$password" https://${userNode}/api/statuses/direct_messages/show.xml)"
+result="$(curl $curlOpts -u "$userName:$password" https://${userNode}/api/statuses/direct_messages/show.xml)"
 display_text "$result"
 ;;
 "-D" | "--post-direct-message")
@@ -206,7 +210,7 @@ if [ "$verify" = "true" ]; then
 read -p "Edit direct message to $target or press control+c to abort:
 " -e -i "$status" status
 fi
-result="$(curl -s -u "$userName:$password" -d user="$target" -d text="$status" -d source="$clientName" https://${userNode}/api/direct_messages/new.xml)"
+result="$(curl $curlOpts -u "$userName:$password" -d user="$target" -d text="$status" -d source="$clientName" https://${userNode}/api/direct_messages/new.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
 notify "$error"
@@ -216,7 +220,7 @@ notify "Message sent."
 ;;
 "-f" | "--follow")
 shift
-result="$(curl -s -u "$userName:$password" -d screen_name="$1" https://${userNode}/api/friendships/create.xml)"
+result="$(curl $curlOpts -u "$userName:$password" -d screen_name="$1" https://${userNode}/api/friendships/create.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
 notify "$error"
@@ -237,7 +241,7 @@ if [ -z "$id" ]; then
 echo "Favorite code not found."
 exit 0
 fi
-result="$(curl -s -u "$userName:$password" -d id="$id" https://${userNode}/api/favorites/create.xml)"
+result="$(curl $curlOpts -u "$userName:$password" -d id="$id" https://${userNode}/api/favorites/create.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
 notify "$error"
@@ -256,7 +260,7 @@ read -p "Edit message or press control+c to abort:
 " -e -i "$message" message
 fi
 fi
-result="$(curl -s -u "$userName:$password" -d status="$message" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
+result="$(curl $curlOpts -u "$userName:$password" -d status="$message" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
 notify "$error"
@@ -266,7 +270,7 @@ notify "Notice posted."
 ;;
 "-g" | "--group")
 shift
-result="$(curl -s -u "$userName:$password" -d "id=$clientName" -d "uri=$1" https://${userNode}/api/statusnet/groups/join.xml)"
+result="$(curl $curlOpts -u "$userName:$password" -d "id=$clientName" -d "uri=$1" https://${userNode}/api/statusnet/groups/join.xml)"
 echo "$result"
 ;;
 "-m"* | "--mentions"*)
@@ -274,7 +278,7 @@ count=$(echo "$action" | tr -cd "[:digit:]")
 if [ -z "$count" ]; then
 count=20
 fi
-result="$(curl -s -u "$userName:$password" -d count="$count" https://${userNode}/api/statuses/mentions_timeline.xml)"
+result="$(curl $curlOpts -u "$userName:$password" -d count="$count" https://${userNode}/api/statuses/mentions_timeline.xml)"
 display_text "$result"
 ;;
 "-M" | "--music")
@@ -355,7 +359,7 @@ rate=300
 fi
 while :; do
 oldId="$(head -n1 "$configPath/history" | rev | cut -d '=' -f1 | rev)"
-newId="$(curl -s -u "$userName:$password" -d count="1" https://${userNode}/api/statuses/home_timeline.xml | grep '^  <id>' | tr -cd "[:digit:]")"
+newId="$(curl $curlOpts -u "$userName:$password" -d count="1" https://${userNode}/api/statuses/home_timeline.xml | grep '^  <id>' | tr -cd "[:digit:]")"
 if [ $oldId -ne $newId ]; then
 play -nqV0 synth pl C2 pl C3 pl E2 pl E3 pl G2 pl G3 pl C4 pl C5 pl E4 pl E5 pl G4 pl G5 delay 0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 fade h 0 2.5 1.5 remix - flanger 0 5 chorus 0.25 0.15 100 0.99 0.1 9.9 -s norm &> /dev/null
 oldId=$newId
@@ -383,13 +387,13 @@ name="$(echo "$name" | cut -d '@' -f1)"
 fi
 message="$*"
 quote="QT @$name "
-quote="${quote}$(curl -s -u "$userName:$password" "${userNode}/api/statuses/show.xml?id=${in_reply_to}" | grep '^ <text>' | sed -e 's/^ <text>//' -e 's/<\/text>$//')"
+quote="${quote}$(curl $curlOpts -u "$userName:$password" "${userNode}/api/statuses/show.xml?id=${in_reply_to}" | grep '^ <text>' | sed -e 's/^ <text>//' -e 's/<\/text>$//')"
 if [ "$verify" = "true" ] ; then
 read -p "Edit message or press control+c to abort. %qt% will be replaced with the message you want to quote:
 " -e -i "$message" message
 fi
 message="$(echo "$message" | sed "s/%qt%/$quote/gi")"
-result="$(curl -s -u "$userName:$password" -d status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" $userNode/api/statuses/update.xml)"
+result="$(curl $curlOpts -u "$userName:$password" -d status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" $userNode/api/statuses/update.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
 notify "$error"
@@ -420,7 +424,7 @@ if [ "$verify" = "true" ] ; then
 read -p "Edit message or press control+c to abort:
 " -e -i "$message" message
 fi
-result="$(curl -s -u "$userName:$password" -d status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
+result="$(curl $curlOpts -u "$userName:$password" -d status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
 notify "$error"
@@ -441,7 +445,7 @@ if [ -z "$id" ]; then
 echo "Favorite code not found."
 exit 0
 fi
-result="$(curl -s -u "$userName:$password" -d id="$id" -d source="$clientName" https://${userNode}/api/statuses/retweet/${target}.xml)"
+result="$(curl $curlOpts -u "$userName:$password" -d id="$id" -d source="$clientName" https://${userNode}/api/statuses/retweet/${target}.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
 notify "$error"
@@ -460,7 +464,7 @@ echo
 echo "This is your file, press control+c to skip playback:"
 play -qV0 "$file.ogg" &> /dev/null
 fi
-upload="$(curl -s --form file="@$file.ogg" --form submit=upload http://sndup.net/post.php)"
+upload="$(curl $curlOpts --form file="@$file.ogg" --form submit=upload http://sndup.net/post.php)"
     jsonInfo="$(echo "$upload" | sed 's/,/\n/g')"
 fileUrl="$(echo "$jsonInfo" | grep 'url' | sed -e 's/^{"url":"//' -e 's/\/a/\/d/' | tr -d '"\\')"
 rm -f "$file.ogg"
@@ -477,7 +481,7 @@ count=$(echo "$action" | tr -cd "[:digit:]")
 if [ -z "$count" ]; then
 count=20
 fi
-result="$(curl -s -u "$userName:$password" -d count="$count" https://${userNode}/api/statuses/home_timeline.xml)"
+result="$(curl $curlOpts -u "$userName:$password" -d count="$count" https://${userNode}/api/statuses/home_timeline.xml)"
 display_text "$result"
 ;;
 "-u"* | "--user"*)
@@ -485,7 +489,7 @@ count=$(echo "$action" | tr -cd "[:digit:]")
 if [ -z "$count" ]; then
 count=20
 fi
-result="$(curl -s -u "$userName:$password" -d count="$count" https://${userNode}/api/statuses/home_timeline.xml)"
+result="$(curl $curlOpts -u "$userName:$password" -d count="$count" https://${userNode}/api/statuses/home_timeline.xml)"
 display_text "$result"
 ;;
 *)

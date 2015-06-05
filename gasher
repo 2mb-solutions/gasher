@@ -109,7 +109,7 @@ statusId=($(echo "$1" | grep '^  <id>' | sed -e 's/^  <id>//' -e 's/<\/id>$//'))
 i=0
 unset pagerText
 while [ $i -lt ${#name[*]} ]; do
-pagerText="${pagerText}${name[$i]} [$i]: ${text[$i]}\nPosted: ${createdAt[$i]} from ${source[$i]}\n"
+pagerText="${pagerText}${name[$i]} [$i]: ${text[$i]}\nPosted: ${createdAt[$i]} by ${screenName[$i]}@${uri[$i]} from ${source[$i]}\n"
 echo "$i=${uri[$i]}:name=${screenName[$i]}:reply_id=${statusId[$i]}" >> $configPath/history
 ((i++))
 done

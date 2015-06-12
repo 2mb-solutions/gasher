@@ -251,8 +251,15 @@ notify "Notice $id favorited."
 ;;
 "-p" | "--post")
 shift
-if [ -n "$gui" -a $# -eq 0 ]; then
+if [ $# -eq 0 ]; then
+if [ -n "$gui" ]; then
 message="$($gui --entry --title "$clientName" --entry-label "Share your status:")"
+else
+file="$(mktemp -u)"
+editor="${EDITOR:-nano}"
+$editor "$file"
+message="$(cat "$file")"
+fi
 else
 message="$*"
 if [ "$verify" = "true" ]; then

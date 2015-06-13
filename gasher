@@ -205,12 +205,21 @@ display_text "$result"
 shift
 target="$1"
 shift
-status="$*"
+if [ $# -eq 0 ]; then
+file="$(mktemp -u)"
+echo "@$name " > "$file"
+editor="${EDITOR:-nano}"
+$editor "$file"
+message="$(cat "$file")"
+rm "$file" &> /dev/null
+else
+message="$*"
 if [ "$verify" = "true" ]; then
 read -p "Edit direct message to $target or press control+c to abort:
-" -e -i "$status" status
+" -e -i "$message" message
 fi
-result="$(curl $curlOpts -u "$userName:$password" -d user="$target" -d text="$status" -d source="$clientName" https://${userNode}/api/direct_messages/new.xml)"
+fi
+result="$(curl $curlOpts -u "$userName:$password" -d user="$target" -d text="$message" -d source="$clientName" https://${userNode}/api/direct_messages/new.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
 if [ -n "$error" ]; then
 notify "$error"
@@ -252,14 +261,11 @@ notify "Notice $id favorited."
 "-p" | "--post")
 shift
 if [ $# -eq 0 ]; then
-if [ -n "$gui" ]; then
-message="$($gui --entry --title "$clientName" --entry-label "Share your status:")"
-else
 file="$(mktemp -u)"
 editor="${EDITOR:-nano}"
 $editor "$file"
 message="$(cat "$file")"
-fi
+rm "$file" &> /dev/null
 else
 message="$*"
 if [ "$verify" = "true" ]; then
@@ -269,6 +275,9 @@ fi
 fi
 result="$(curl $curlOpts -u "$userName:$password" -d status="$message" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+if [ -f "$file" ]; then
+rm "$file" &> /dev/null
+fi
 if [ -n "$error" ]; then
 notify "$error"
 exit 1
@@ -392,7 +401,15 @@ name="${name}@$(grep "^$target=" "$configPath/history" | cut -d '=' -f2 | cut -d
 if echo "$name" | grep "$userNode" &> /dev/null ; then
 name="$(echo "$name" | cut -d '@' -f1)"
 fi
+if [ $# -eq 0 ]; then
+file="$(mktemp -u)"
+editor="${EDITOR:-nano}"
+$editor "$file"
+message="$(cat "$file")"
+rm "$file" &> /dev/null
+else
 message="$*"
+fi
 quote="QT @$name "
 quote="${quote}$(curl $curlOpts -u "$userName:$password" "${userNode}/api/statuses/show.xml?id=${in_reply_to}" | grep '^ <text>' | sed -e 's/^ <text>//' -e 's/<\/text>$//')"
 if [ "$verify" = "true" ] ; then
@@ -426,10 +443,19 @@ name="${name}@$(grep "^$target=" "$configPath/history" | cut -d '=' -f2 | cut -d
 if echo "$name" | grep "$userNode" &> /dev/null ; then
 name="$(echo "$name" | cut -d '@' -f1)"
 fi
+if [ $# -eq 0 ]; then
+file="$(mktemp -u)"
+echo "@$name " > "$file"
+editor="${EDITOR:-nano}"
+$editor "$file"
+message="$(cat "$file")"
+rm "$file" &> /dev/null
+else
 message=" @$name $*"
 if [ "$verify" = "true" ] ; then
 read -p "Edit message or press control+c to abort:
 " -e -i "$message" message
+fi
 fi
 result="$(curl $curlOpts -u "$userName:$password" -d status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"

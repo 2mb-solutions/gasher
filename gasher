@@ -258,6 +258,9 @@ exit 1
 fi
 notify "Notice $id favorited."
 ;;
+"--pimp")
+pimp=true
+;&
 "-p" | "--post")
 shift
 if [ $# -eq 0 ]; then
@@ -272,6 +275,9 @@ if [ "$verify" = "true" ]; then
 read -p "Edit message or press control+c to abort:
 " -e -i "$message" message
 fi
+fi
+if [ "$pimp" = "true" ]; then
+message="$(curl -s --data-urlencode English="$message" --data-urlencode submit=" Talk Like a Pimp " http://joel.net/EBONICS/translator/ | grep -A9 '<div class="bubble1 comicfont">' | sed -e '/<div/d' -e '/<\/div>/d' -e "s/&#39;/'/g")"
 fi
 result="$(curl $curlOpts -u "$userName:$password" -d status="$message" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
 error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"

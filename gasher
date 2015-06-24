@@ -169,13 +169,9 @@ if [ -z "$userName" ]; then
     source "$configPath/config"
 fi
 # Pager is set here, to allow the PAGER variable to be set in either invironment or gasher's config
-if [ -z "$PAGER" ]; then
-    PAGER=more
-fi
+    PAGER="${PAGER:-more}"
 #set default curl options:
-if [ -z "$curlOpts" ]; then
-curlOpts="-s"
-fi
+curlOpts="${curlOpts:--s}"
 
 # Find out if we have GUI capabilities
 unset gui

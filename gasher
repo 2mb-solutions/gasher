@@ -136,7 +136,7 @@ if [ ! -f "$configPath/config" ]; then
     echo "Setup is quick and painless."
     echo
     read -p "Please enter your GNU Social username, This is the part before the @ symbol: " userName
-    read -p "Please enter your GNU Social node: " -e -i social.2mb.solutions userNode
+    read -p "Please enter your GNU Social node: " -e -i 2mb.social userNode
     read -sp "Please enter your GNU Social password: " password
     read -p "Post music to a group? You need to subscribe to the group for this to work: " -e -i listening musicGroup
     echo

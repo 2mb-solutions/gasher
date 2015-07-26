@@ -69,7 +69,7 @@ done < <(grep -e "^\(title\|artist\|album\|stationName\|pRet\|pRetStr\|wRet\|wRe
 album=$(echo "$album" | sed "s/ (Explicit)//g")
 case "$1" in
 "songstart")
-echo "$artist\\$title\\$album" > $HOME/.config/pianobar/nowplaying
+echo "$artist\\$title\\$album\\$stationName" > $HOME/.config/pianobar/nowplaying
 ;;
 "songfinish")
 rm $HOME/.config/pianobar/nowplaying
@@ -331,6 +331,7 @@ if [ -f "$xdgPath/pianobar/nowplaying" ]; then
 album="$(cut -f 3 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
 artist="$(cut -f 1 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
 musicPlayer="pianobar"
+station="$(cut -f 4 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
 title="$(cut -f 2 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
 else
 echo "Pianobar is running, but there is no $xdgPath/pianobar/nowplaying file."
@@ -369,12 +370,17 @@ fi
 if [ -n "$musicGroup" ] ; then
 message="${message} !${musicGroup}"
 fi
+if [ -n "$station" ] ; then
+if [ "$station" = "${station/ /}" ]; then
+station="#$station"
+fi
+message="${message} on station ${station}."
+fi
 if [ "$verify" = "true" ] ; then
 read -p "Edit message or press control+c to abort:
 " -e -i "$message" message
 fi
 $0 -p "$message"
-message="#NowPlaying \"$title\" by \"$artist\" from \"$album\" via #$musicPlayer !listening"
 ;;
 "-n" | "--notify")
 if ! [[ "$rate" =~ ^[0-9]+$ ]]; then

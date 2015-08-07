@@ -145,6 +145,7 @@ if [ ! -f "$configPath/config" ]; then
     if [ -n "$musicGroup" ] ; then
         echo "musicGroup=${musicGroup}" >> "$configPath/config"
     fi
+chmod 600 "$configPath/config"
     if [ $? -eq 0 ] ; then
         echo "Thanks, setup is now complete. Welcome to $clientName $userName@$userNode."
     fi

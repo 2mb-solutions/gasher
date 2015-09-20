@@ -344,10 +344,10 @@ configure_pianobar
 fi
 fi 
 elif pgrep xmms2 &> /dev/null ; then
-album="$(nyxmms2 info | grep album | cut -d '=' -f2- | sed 's/^ //')"
-artist="$(nyxmms2 info | grep artist | cut -d '=' -f2- | sed 's/^ //')"
+album="$(xmms2 info | grep album | cut -d '=' -f2- | sed 's/^ //')"
+artist="$(xmms2 info | grep artist | cut -d '=' -f2- | sed 's/^ //')"
 musicPlayer="xmms2"
-title="$(nyxmms2 info | grep title | cut -d '=' -f2- | sed 's/^ //')"
+title="$(xmms2 info | grep title | cut -d '=' -f2- | sed 's/^ //')"
 else
 notify "Sorry, $client name couldn't detect any music information."
 exit 0

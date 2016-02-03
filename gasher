@@ -141,6 +141,11 @@ if [ ! -f "$configPath/config" ]; then
     read -sp "Please enter your GNU Social password: " password
     read -p "Post music to a group? You need to subscribe to the group for this to work: " -e -i listening musicGroup
     echo
+
+	# Escape config values
+	userName=$(echo "$userName" | sed -e "s/['\"\$\!]/\\\&/g")
+	password=$(echo "$password" | sed -e "s/['\"\$\!]/\\\&/g")
+
     echo -e "userName=${userName}\npassword=${password}\nuserNode=${userNode}" > "$configPath/config"
     if [ -n "$musicGroup" ] ; then
         echo "musicGroup=${musicGroup}" >> "$configPath/config"

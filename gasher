@@ -1,19 +1,13 @@
 #!/bin/bash
 
-# A note on code formatting. I am blind, and usually only add indention as an after thought.
-#If you want to contribute and need the indention, and feel like fixing it, by all means, feel free to do so.
-#Otherwise, I'll get to it eventually... Maybe.
-
 clientName="${0##*/}"
 clientName="${clientName^}"
 
 show_help()
 {
-cat << EOF
-$clientName, a 2MB Solutions product.
- released under the GPL version 3 or later.
-For more great stuff, visit http://2mb.solutions
-Solutions at the speed of AWESOME!
+cat << EOF | fold -s
+$clientName, brought to you by 2MB Solutions.
+released under the terms of the unlicense: http://unlicense.org/
 
 Usage:
 $0 -a --account name: Use config file $configPath/config.name. Useful if you have multiple accounts.
@@ -28,7 +22,7 @@ $0 -M --music: automatically post the playing song. Supported clients are cmus, 
 $0 -n --notify: Notify you of new activity. You can add rate=seconds to the config file. The default is 300 (5 minutes).
 Add an & to send the process to the background
 $0 -p --post: Post to your node.
-$0 -Q --quote status_code text: Repeat a notice with your own text added. Type %qt% where you want the original text to appear.
+$0 -Q --quote status_code text: Repeat a notice with your own text added. Opens \$EDITOR with the quoted text ready for your addition.
 $0 -r --reply number: reply to someone. Number is the number in brackets after their name.
 $0 -R --repeat status_code: Repeat the notice with the code you chose. The codes are in the brackets just after the name.
 $0 -s --soundclip: Interactively post a soundclip.
@@ -42,23 +36,22 @@ When entering your password during setup, If the password contains a space, put 
 EOF
 }
 
-#configure pianobar
-configure_pianobar()
+die()
 {
-#remove all old settings
-rm -rf $xdgPath/pianobar &> /dev/null
-# create new directory
-mkdir -p $xdgPath/pianobar &> /dev/null
-#create fifo
-mkfifo $xdgPath/pianobar/ctl &> /dev/null
-read -p "Enter your pandora user name (email address): " pUser
-read -p "Enter your pandora password or leave blank to be prompted each time Pianobar starts: " pPass
-echo "user = $pUser" > "$xdgPath/pianobar/config"
-if [ -n "$pPass" ]; then
-echo "password = $pPass" >> "$xdgPath/pianobar/config"
-fi
-echo "event_command = $xdgPath/pianobar/eventcmd.sh" >> "$xdgPath/pianobar/config"
-#create eventcmd.sh
+    >&2 echo "$1" | fold -s
+    if [[ "$2" =~ ^[0-9]+$ ]]; then
+        if [ $2 -le 255 ]; then
+            exit $2
+        fi
+    fi
+        exit 1
+}
+
+# Create eventcmd.sh for pianobar
+create_eventcmd()
+{
+# This is left aligned because it echos to a file.
+# This should work without modification, and is part of configuring Pianobar
 echo '#!/bin/bash
 # create variables
 while read L; do
@@ -86,99 +79,117 @@ fi
 ;;
 esac
 exit 0' > $xdgPath/pianobar/eventcmd.sh
-chmod 700 $xdgPath/pianobar/eventcmd.sh
-echo "Pianobar setup complete. Please restart Pianobar for changes to take effect."
-exit 0
+}
+
+#configure pianobar
+configure_pianobar()
+{
+    #remove all old settings
+    rm -rf $xdgPath/pianobar &> /dev/null
+    # create new directory
+    mkdir -p $xdgPath/pianobar &> /dev/null
+    #create fifo
+    mkfifo $xdgPath/pianobar/ctl &> /dev/null
+    read -p "Enter your pandora user name (email address): " pUser
+    read -p "Enter your pandora password or leave blank to be prompted each time Pianobar starts: " pPass
+    echo "user = $pUser" > "$xdgPath/pianobar/config"
+    if [ -n "$pPass" ]; then
+        echo "password = $pPass" >> "$xdgPath/pianobar/config"
+    fi
+    echo "event_command = $xdgPath/pianobar/eventcmd.sh" >> "$xdgPath/pianobar/config"
+    #create eventcmd.sh it is a function to help keep code formatting as clean as possible.
+    create_eventcmd
+    chmod 700 $xdgPath/pianobar/eventcmd.sh
+    echo "Pianobar setup complete. Please restart Pianobar for changes to take effect."
+    exit 0
 }
 
 # Display information
 display_text()
 {
-echo "$1" > tmp.txt
-# backup IFS
-ifs="$IFS"
-IFS=$'\n'
-rm -f $configPath/history
-createdAt=($(echo "$1" | grep '^  <created_at>' | sed -e 's/^  <created_at>//' -e 's/<\/created_at>$//'))
-name=($(echo "$1" | grep '^   <name>' | sed -e 's/^   <name>//' -e 's/<\/name>$//'))
-screenName=($(echo "$1" | grep '^   <screen_name>' | sed -e 's/^   <screen_name>//' -e 's/<\/screen_name>$//'))
-source=($(echo "$1" | grep '^  <source>' | sed -e 's/^  <source>//' -e 's/<\/source>$//' -e 's/&lt;a href=&quot;http:\/\/twitter\.com\/&quot; rel=&quot;nofollow&quot;&gt;//' -e 's/&lt;\/a&gt;//'))
-text=($(echo "$1" | grep '^  <text>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/&quot;/"/g' -e "s/&apos;/'/g" -e 's/&gt;/>/g' -e 's/&lt;/</g'))
-uri=($(echo "$1" | grep '^  <uri>' | sed -e 's/^  <uri>tag://' -e 's/^  <uri>http:\/\///' -e 's/<\/uri>$//' | cut -d ',' -f1 | cut -d / -f1))
-statusId=($(echo "$1" | grep '^  <id>' | sed -e 's/^  <id>//' -e 's/<\/id>$//'))
-#display info
-i=0
-unset pagerText
-while [ $i -lt ${#name[*]} ]; do
-pagerText="${pagerText}${name[$i]} [$i]: ${text[$i]}\nPosted: ${createdAt[$i]} by ${screenName[$i]}@${uri[$i]} from ${source[$i]}\n"
-echo "$i=${uri[$i]}:name=${screenName[$i]}:reply_id=${statusId[$i]}" >> $configPath/history
-((i++))
-done
-IFS="$ifs"
-echo -e "$pagerText" | $PAGER
+    # backup IFS
+    ifs="$IFS"
+    IFS=$'\n'
+    rm -f $configPath/history
+    createdAt=($(echo "$1" | grep '^  <created_at>' | sed -e 's/^  <created_at>//' -e 's/<\/created_at>$//'))
+    name=($(echo "$1" | grep '^   <name>' | sed -e 's/^   <name>//' -e 's/<\/name>$//' -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&amp;/&/g'))
+    screenName=($(echo "$1" | grep '^   <screen_name>' | sed -e 's/^   <screen_name>//' -e 's/<\/screen_name>$//' -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&amp;/&/g'))
+    source=($(echo "$1" | grep '^  <source>' | sed -e 's/^  <source>//' -e 's/<\/source>$//' -e 's/&lt;a href=&quot;http:\/\/twitter\.com\/&quot; rel=&quot;nofollow&quot;&gt;//' -e 's/&lt;\/a&gt;//'))
+    text=($(echo "$1" | grep '^  <text>' | sed -e 's/^  <text>//' -e 's/<\/text>$//' -e 's/&quot;/"/g' -e "s/&apos;/'/g" -e 's/&gt;/>/g' -e 's/&lt;/</g'))
+    uri=($(echo "$1" | grep '^  <uri>' | sed -e 's/^  <uri>tag://' -e 's/^  <uri>http:\/\///' -e 's/<\/uri>$//' | cut -d ',' -f1 | cut -d / -f1))
+    statusId=($(echo "$1" | grep '^  <id>' | sed -e 's/^  <id>//' -e 's/<\/id>$//'))
+    #display info
+    i=0
+    unset pagerText
+    while [ $i -lt ${#name[*]} ]; do
+        pagerText="${pagerText}${name[$i]} [$i]: ${text[$i]}\nPosted: ${createdAt[$i]} by ${screenName[$i]}@${uri[$i]} from ${source[$i]}\n"
+        echo "$i=${uri[$i]}:name=${screenName[$i]}:reply_id=${statusId[$i]}" >> $configPath/history
+        ((i++))
+    done
+    IFS="$ifs"
+    echo -e "$pagerText" | fold -s | $PAGER
 }
 
 # Set up the configuration directory information
-if [ -z "$XDG_CONFIG_HOME" ]; then
-    configPath="$HOME/.config/gasher"
-xdgPath="$HOME/.config"
-else
-    configPath="$XDG_CONFIG_HOME/gasher"
-    xdgPath="$XDG_CONFIG_HOME"
-fi
+configPath="${XDG_CONFIG_HOME:-$HOME/.config}"
+configPath="${configPath}/gasher"
 if [ ! -d "$configPath" ]; then
-    mkdir -p "$configPath"
+        mkdir -p "$configPath"
 fi
 
 # Create settings if they do not exist.
 if [ ! -f "$configPath/config" ]; then
-    echo "Welcome to $clientName! A 2MB Solutions product."
-    echo "It appears you do not have a GNU Social account configured."
-    echo "Setup is quick and painless."
-    echo
-    read -p "Please enter your GNU Social username, This is the part before the @ symbol: " userName
-    read -p "Please enter your GNU Social node: " -e -i 2mb.social userNode
-    read -sp "Please enter your GNU Social password: " password
-    read -p "Post music to a group? You need to subscribe to the group for this to work: " -e -i listening musicGroup
-    echo
-
-	# Escape config values
-	userName=$(echo "$userName" | sed -e "s/['\"\$\!]/\\\&/g")
-	password=$(echo "$password" | sed -e "s/['\"\$\!]/\\\&/g")
-
-    echo -e "userName=${userName}\npassword=${password}\nuserNode=${userNode}" > "$configPath/config"
-    if [ -n "$musicGroup" ] ; then
-        echo "musicGroup=${musicGroup}" >> "$configPath/config"
-    fi
-chmod 600 "$configPath/config"
-    if [ $? -eq 0 ] ; then
-        echo "Thanks, setup is now complete. Welcome to $clientName $userName@$userNode."
-    fi
+        echo "Welcome to $clientName! Brought to you by Storm Dragon."
+        echo "It appears you do not have a GNU Social account configured."
+        echo "Setup is quick and painless."
+        echo
+        read -p "Please enter your GNU Social username, This is the part before the @ symbol: " userName
+        read -p "Please enter your GNU Social node: " -e -i 2mb.social userNode
+        read -sp "Please enter your GNU Social password: " password
+        # Escape config values
+        userName=$(echo "$userName" | sed -e "s/['\"\$\!]/\\\&/g")
+        password=$(echo "$password" | sed -e "s/['\"\$\!]/\\\&/g")
+        # Simple obfuscation of passwords
+        password="$(echo "$password" | base64 -)"
+        read -p "Post music to a group? You need to subscribe to the group for this to work: " -e -i listening musicGroup
+        echo
+        echo -e "userName=${userName}\npassword=${password}\nuserNode=${userNode}" > "$configPath/config"
+        if [ -n "$musicGroup" ] ; then
+                echo "musicGroup=${musicGroup}" >> "$configPath/config"
+        fi
+    chmod 600 "$configPath/config"
+        if [ $? -eq 0 ] ; then
+                echo "Thanks, setup is now complete. Welcome to $clientName $userName@$userNode."
+        fi
 fi
 
 notify()
 {
-    if [ $gui ]; then
-        $gui --notify --timeout 5 --selectable-labels --text "$*"
-    else
-        echo "$*"
-    fi
+        if [ $gui ]; then
+                $gui --notify --timeout 5 --selectable-labels --text "$*"
+        else
+                echo "$*"
+        fi
 }
 
 # read settings
 case "$1" in
-"-a" | "--account")
-    shift
-    source "$configPath/config.$1"
-    shift
+    "-a" | "--account")
+            shift
+            source "$configPath/config.$1"
+            shift
 esac
 if [ -z "$userName" ]; then
     source "$configPath/config"
 fi
+# Deobfuscate  password:
+password="$(echo "$password" | base64 --decode -)"
 # Pager is set here, to allow the PAGER variable to be set in either invironment or gasher's config
-    PAGER="${PAGER:-more}"
-#set default curl options:
+PAGER="${PAGER:-more}"
+# set default curl options:
 curlOpts="${curlOpts:--s}"
+# Set the number of statuses to retrieve:
+retrieve="${retrieve:-100}"
 
 # Find out if we have GUI capabilities
 unset gui
@@ -191,364 +202,360 @@ fi
 # actions are based on $1
 # Default is -t
 if [ $# -eq 0 ]; then
-action="--timeline"
+    action="--timeline"
 else
-action="$1"
+    action="$1"
 fi
 if echo "$action" | grep -i ".*\(v\)\|\(-verify\)" ; then
-verify="true"
-action="$(echo "$action" | sed -e 's/-verify//' -e 's/v//i')"
+    verify="true"
+    action="$(echo "$action" | sed -e 's/-verify//' -e 's/v//i')"
 fi
 case "$action" in
-"-d" | "--direct-messages" | "")
-result="$(curl $curlOpts -u "$userName:$password" https://${userNode}/api/statuses/direct_messages/show.xml)"
-display_text "$result"
-;;
-"-D" | "--post-direct-message")
-shift
-target="$1"
-shift
-if [ $# -eq 0 ]; then
-file="$(mktemp -u)"
-echo "@$name " > "$file"
-editor="${EDITOR:-nano}"
-$editor "$file"
-message="$(cat "$file")"
-rm "$file" &> /dev/null
-else
-message="$*"
-if [ "$verify" = "true" ]; then
-read -p "Edit direct message to $target or press control+c to abort:
-" -e -i "$message" message
-fi
-fi
-result="$(curl $curlOpts -u "$userName:$password" -d user="$target" -d text="$message" -d source="$clientName" https://${userNode}/api/direct_messages/new.xml)"
-error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
-if [ -n "$error" ]; then
-notify "$error"
-exit 1
-fi
-notify "Message sent."
-;;
-"-f" | "--follow")
-shift
-result="$(curl $curlOpts -u "$userName:$password" -d screen_name="$1" https://${userNode}/api/friendships/create.xml)"
-error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
-if [ -n "$error" ]; then
-notify "$error"
-exit 1
-fi
-echo "You now follow $1."
-;;
-"-F" | "--favorite")
-shift
-target="$1"
-shift
-if ! [[ "$target" =~ ^[0-9]+$ ]]; then
-echo "Reply target must be a number. It's the number in brackets just after the name."
-exit 0
-fi
-id="$(grep "^$target" "$configPath/history" | cut -d '=' -f4)"
-if [ -z "$id" ]; then
-echo "Favorite code not found."
-exit 0
-fi
-result="$(curl $curlOpts -u "$userName:$password" -d id="$id" https://${userNode}/api/favorites/create.xml)"
-error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
-if [ -n "$error" ]; then
-notify "$error"
-exit 1
-fi
-notify "Notice $id favorited."
-;;
-"--pimp")
-pimp=true
-;;&
-"-p" | "--post")
-shift
-if [ $# -eq 0 ]; then
-file="$(mktemp -u)"
-editor="${EDITOR:-nano}"
-$editor "$file"
-message="$(cat "$file")"
-rm "$file" &> /dev/null
-else
-message="$*"
-if [ "$verify" = "true" ]; then
-read -p "Edit message or press control+c to abort:
-" -e -i "$message" message
-fi
-fi
-if [ "$pimp" = "true" ]; then
-message="$(curl -s --data-urlencode English="$message" --data-urlencode submit=" Talk Like a Pimp " http://joel.net/EBONICS/translator/ | grep -A9 '<div class="bubble1 comicfont">' | sed -e '/<div/d' -e '/<\/div>/d' -e "s/&#39;/'/g")"
-fi
-result="$(curl $curlOpts -u "$userName:$password" -d status="$message" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
-error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
-if [ -f "$file" ]; then
-rm "$file" &> /dev/null
-fi
-if [ -n "$error" ]; then
-notify "$error"
-exit 1
-fi
-notify "Notice posted."
-;;
-"-g" | "--group")
-shift
-result="$(curl $curlOpts -u "$userName:$password" -d "id=$clientName" -d "uri=$1" https://${userNode}/api/statusnet/groups/join.xml)"
-echo "$result"
-;;
-"-m"* | "--mentions"*)
-count=$(echo "$action" | tr -cd "[:digit:]")
-if [ -z "$count" ]; then
-count=20
-fi
-result="$(curl $curlOpts -u "$userName:$password" -d count="$count" https://${userNode}/api/statuses/mentions_timeline.xml)"
-display_text "$result"
-;;
-"-M" | "--music")
-#This is based on currently running music player.
-if pgrep audacious &> /dev/null ; then
-album="$(audtool --current-song-tuple-data album)"
-artist="$(audtool --current-song-tuple-data artist)"
-musicPlayer="audacious"
-title="$(audtool --current-song-tuple-data title)"
-elif pgrep cmus &> /dev/null ; then
-album="$(cmus-remote -Q | sed -n 's/^tag album //p')"
-artist="$(cmus-remote -Q | sed -n 's/^tag artist //p')"
-musicPlayer="cmus"
-title="$(cmus-remote -Q | sed -n 's/^tag title //p')"
-elif pgrep deadbeef &> /dev/null ; then
-album="$(deadbeef --nowplaying "%b" 2> /dev/null)"
-artist="$(deadbeef --nowplaying "%a" 2> /dev/null)"
-musicPlayer="deadbeef"
-title="$(deadbeef --nowplaying "%t" 2> /dev/null)"
-elif pgrep mopidy &> /dev/null ; then
-album="$(mpc -f %album% current)"
-artist="$(mpc -f %artist% current)"
-musicPlayer="mopidy"
-title="$(mpc -f %title% current)"
-elif pgrep mpd &> /dev/null ; then
-album="$(mpc -f %album% current)"
-artist="$(mpc -f %artist% current)"
-musicPlayer="mpd"
-title="$(mpc -f %title% current)"
-elif pgrep pianobar &> /dev/null ; then
-if [ -f "$xdgPath/pianobar/nowplaying" ]; then
-album="$(cut -f 3 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
-artist="$(cut -f 1 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
-musicPlayer="pianobar"
-station="$(cut -f 4 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
-title="$(cut -f 2 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
-else
-echo "Pianobar is running, but there is no $xdgPath/pianobar/nowplaying file."
-echo "$clientName can configure Pianobar for you, but this will completely overwrite any existing configuration files."
-read -n1 -p "Would you like to create a completely new Pianobar configuration? " continue
-if [ "${continue^}" = "Y" ] ; then
-configure_pianobar
-fi
-fi 
-elif pgrep xmms2 &> /dev/null ; then
-album="$(xmms2 info | grep album | cut -d '=' -f2- | sed 's/^ //')"
-artist="$(xmms2 info | grep artist | cut -d '=' -f2- | sed 's/^ //')"
-musicPlayer="xmms2"
-title="$(xmms2 info | grep title | cut -d '=' -f2- | sed 's/^ //')"
-else
-notify "Sorry, $client name couldn't detect any music information."
-exit 0
-fi
-if [ "$album" = "${album/ /}" ]; then
-album="#$album"
-fi
-if [ "$artist" = "${artist/ /}" ]; then
-artist="#$artist"
-fi
-if [ "$title" = "${title/ /}" ]; then
-title="#$title"
-fi
-if [ -n "$album" -a -n "$artist" -a -n "$title" ]; then
-message="#NowPlaying $title by $artist from $album via #$musicPlayer"
-elif [ -n "$artist" -a -n "$title" ]; then
-message="#NowPlaying $title by $artist via #$musicPlayer"
-else
-notify "Sorry, the current song is either incompletely or improperly tagged. Cannot post."
-exit 0
-fi
-if [ -n "$musicGroup" ] ; then
-message="${message} !${musicGroup}"
-fi
-if [ -n "$station" ] ; then
-if [ "$station" = "${station/ /}" ]; then
-station="#$station"
-fi
-message="${message} on station ${station}."
-fi
-if [ "$verify" = "true" ] ; then
-read -p "Edit message or press control+c to abort:
-" -e -i "$message" message
-fi
-$0 -p "$message"
-;;
-"-n" | "--notify")
-if ! [[ "$rate" =~ ^[0-9]+$ ]]; then
-rate=300
-fi
-#Initialize values
-newId="$(curl $curlOpts -u "$userName:$password" -d count="1" https://${userNode}/api/statuses/home_timeline.xml | grep '^  <id>' | tr -cd "[:digit:]")"
-oldId=$newId
-while :; do
-oldId="$(head -n1 "$configPath/history" | rev | cut -d '=' -f1 | rev)"
-newId="$(curl $curlOpts -u "$userName:$password" -d count="1" https://${userNode}/api/statuses/home_timeline.xml | grep '^  <id>' | tr -cd "[:digit:]")"
-if [ $oldId -ne $newId ]; then
-play -nqV0 synth pl C2 pl C3 pl E2 pl E3 pl G2 pl G3 pl C4 pl C5 pl E4 pl E5 pl G4 pl G5 delay 0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 fade h 0 2.5 1.5 remix - flanger 0 5 chorus 0.25 0.15 100 0.99 0.1 9.9 -s norm &> /dev/null
-oldId=$newId
-fi
-sleep $rate
-done
-;;
-"-Q"* | "--quote"*)
-shift
-target="$1"
-shift
-if ! [[ "$target" =~ ^[0-9]+$ ]]; then
-echo "Quote target must be a number. It's the number in brackets just after the name."
-exit 0
-fi
-in_reply_to="$(grep -m1 "^$target" "$configPath/history" | cut -d '=' -f4)"
-if [ -z "$in_reply_to" ]; then
-echo "Quote code not found."
-exit 0
-fi
-name="$(grep -m1 "^$target=" "$configPath/history" | cut -d '=' -f3 | cut -d ':' -f1)"
-name="${name}@$(grep "^$target=" "$configPath/history" | cut -d '=' -f2 | cut -d ':' -f1)"
-if echo "$name" | grep "$userNode" &> /dev/null ; then
-name="$(echo "$name" | cut -d '@' -f1)"
-fi
-if [ $# -eq 0 ]; then
-file="$(mktemp -u)"
-editor="${EDITOR:-nano}"
-$editor "$file"
-message="$(cat "$file")"
-rm "$file" &> /dev/null
-else
-message="$*"
-fi
-quote="QT @$name "
-quote="${quote}$(curl $curlOpts -u "$userName:$password" "${userNode}/api/statuses/show.xml?id=${in_reply_to}" | grep '^ <text>' | sed -e 's/^ <text>//' -e 's/<\/text>$//')"
-if [ "$verify" = "true" ] ; then
-read -p "Edit message or press control+c to abort. %qt% will be replaced with the message you want to quote:
-" -e -i "$message" message
-fi
-message="$(echo "$message" | sed "s/%qt%/$quote/gi")"
-result="$(curl $curlOpts -u "$userName:$password" -d status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" $userNode/api/statuses/update.xml)"
-error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
-if [ -n "$error" ]; then
-notify "$error"
-exit 1
-fi
-notify "Notice posted containing quote from $name."
-;;
-"-r"* | "--reply"*)
-shift
-target="$1"
-shift
-if ! [[ "$target" =~ ^[0-9]+$ ]]; then
-echo "Reply target must be a number. It's the number in brackets just after the name."
-exit 0
-fi
-in_reply_to="$(grep -m1 "^$target" "$configPath/history" | cut -d '=' -f4)"
-if [ -z "$in_reply_to" ]; then
-echo "Reply code not found."
-exit 0
-fi
-name="$(grep -m1 "^$target=" "$configPath/history" | cut -d '=' -f3 | cut -d ':' -f1)"
-name="${name}@$(grep "^$target=" "$configPath/history" | cut -d '=' -f2 | cut -d ':' -f1)"
-if echo "$name" | grep "$userNode" &> /dev/null ; then
-name="$(echo "$name" | cut -d '@' -f1)"
-fi
-if [ $# -eq 0 ]; then
-file="$(mktemp -u)"
-echo "@$name " > "$file"
-editor="${EDITOR:-nano}"
-$editor "$file"
-message="$(cat "$file")"
-rm "$file" &> /dev/null
-else
-message=" @$name $*"
-if [ "$verify" = "true" ] ; then
-read -p "Edit message or press control+c to abort:
-" -e -i "$message" message
-fi
-fi
-result="$(curl $curlOpts -u "$userName:$password" -d status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
-error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
-if [ -n "$error" ]; then
-notify "$error"
-exit 1
-fi
-notify "Comment posted in reply to $name."
-;;
-"-R" | "--repeat")
-shift
-target="$1"
-shift
-if ! [[ "$target" =~ ^[0-9]+$ ]]; then
-echo "Reply target must be a number. It's the number in brackets just after the name."
-exit 0
-fi
-id="$(grep "^$target=" "$configPath/history" | cut -d '=' -f4)"
-if [ -z "$id" ]; then
-echo "Favorite code not found."
-exit 0
-fi
-result="$(curl $curlOpts -u "$userName:$password" -d id="$id" -d source="$clientName" https://${userNode}/api/statuses/retweet/${target}.xml)"
-error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
-if [ -n "$error" ]; then
-notify "$error"
-exit 1
-fi
-notify "Notice $id repeated."
-;;
-"-s" | "--soundclip")
-file="$(mktemp -u)"
-echo "Recording... Press control+c when you are finished."
-rec -qV0 "$file.wav"
-sox "$file.wav" "$file.ogg" norm
-rm -f "$file.wav"
-if [ "$verify" = "true" ]; then
-echo
-echo "This is your file, press control+c to skip playback:"
-play -qV0 "$file.ogg" &> /dev/null
-fi
-upload="$(curl $curlOpts --form file="@$file.ogg" --form submit=upload http://sndup.net/post.php)"
-    jsonInfo="$(echo "$upload" | sed 's/,/\n/g')"
-fileUrl="$(echo "$jsonInfo" | grep 'url' | sed -e 's/^{"url":"//' -e 's/\/a/\/d/' | tr -d '"\\')"
-rm -f "$file.ogg"
-message="#audio $fileUrl #soundclip"
-if [ "$verify" = "true" ]; then
-echo
-read -p "Edit message or press enter to send. Press contrl_c to abort:
-" -e -i "$message" message
-fi
-$0 -p "$message"
-;;
-"-t"* | "--timeline"*)
-count=$(echo "$action" | tr -cd "[:digit:]")
-if [ -z "$count" ]; then
-count=20
-fi
-result="$(curl $curlOpts -u "$userName:$password" -d count="$count" https://${userNode}/api/statuses/home_timeline.xml)"
-display_text "$result"
-;;
-"-u"* | "--user"*)
-count=$(echo "$action" | tr -cd "[:digit:]")
-if [ -z "$count" ]; then
-count=20
-fi
-result="$(curl $curlOpts -u "$userName:$password" -d count="$count" https://${userNode}/api/statuses/home_timeline.xml)"
-display_text "$result"
-;;
-*)
-show_help
+    "-d" | "--direct-messages" | "")
+        result="$(curl $curlOpts -u "$userName:$password" https://${userNode}/api/statuses/direct_messages/show.xml)"
+        display_text "$result"
+    ;;
+    "-D" | "--post-direct-message")
+        shift
+        target="$1"
+        shift
+        if [ $# -eq 0 ]; then
+            file="$(mktemp)"
+            echo "@$name " > "$file"
+            editor="${EDITOR:-nano}"
+            $editor "$file"
+            message="$(cat "$file")"
+            rm "$file" &> /dev/null
+        else
+            message="$*"
+            if [ "$verify" = "true" ]; then
+                read -p "Edit direct message to $target or press control+c to abort:
+                " -e -i "$message" message
+            fi
+        fi
+        result="$(curl $curlOpts -u "$userName:$password" -d user="$target" --data-urlencode text="$message" -d source="$clientName" https://${userNode}/api/direct_messages/new.xml)"
+        error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+        if [ -n "$error" ]; then
+            notify "$error"
+            exit 1
+        fi
+        notify "Message sent."
+    ;;
+    "-f" | "--follow")
+        shift
+        result="$(curl $curlOpts -u "$userName:$password" -d screen_name="$1" https://${userNode}/api/friendships/create.xml)"
+        error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+        if [ -n "$error" ]; then
+            notify "$error"
+            exit 1
+        fi
+        echo "You now follow $1."
+    ;;
+    "-F" | "--favorite")
+        shift
+        target="$1"
+        shift
+        if ! [[ "$target" =~ ^[0-9]+$ ]]; then
+            echo "Reply target must be a number. It's the number in brackets just after the name."
+            exit 0
+        fi
+        id="$(grep "^$target" "$configPath/history" | cut -d '=' -f4)"
+        if [ -z "$id" ]; then
+            echo "Favorite code not found."
+            exit 0
+        fi
+        result="$(curl $curlOpts -u "$userName:$password" -d id="$id" https://${userNode}/api/favorites/create.xml)"
+        error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+        if [ -n "$error" ]; then
+            notify "$error"
+            exit 1
+        fi
+        notify "Notice $id favorited."
+    ;;
+    "--pimp")
+        # This just sets the variable pimp to true before falling through to the next matching case.
+        pimp=true
+    ;;&
+    "-p" | "--post")
+        shift
+        if [ $# -eq 0 ]; then
+            file="$(mktemp)"
+            editor="${EDITOR:-nano}"
+            $editor "$file"
+            message="$(cat "$file")"
+            rm "$file" &> /dev/null
+        else
+            message="$*"
+            if [ "$verify" = "true" ]; then
+                read -p "Edit message or press control+c to abort:
+                " -e -i "$message" message
+            fi
+        fi
+        if [ "$pimp" = "true" ]; then
+            message="$(curl -s --data-urlencode English="$message" --data-urlencode submit=" Talk Like a Pimp " http://joel.net/EBONICS/translator/ | grep -A9 '<div class="bubble1 comicfont">' | sed -e '/<div/d' -e '/<\/div>/d' -e "s/&#39;/'/g")"
+        fi
+        result="$(curl $curlOpts -u "$userName:$password" --data-urlencode status="$message" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
+        error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+        if [ -f "$file" ]; then
+            rm "$file" &> /dev/null
+        fi
+        if [ -n "$error" ]; then
+            notify "$error"
+            exit 1
+        fi
+        notify "Notice posted."
+    ;;
+    "-g" | "--group")
+        shift
+        result="$(curl $curlOpts -u "$userName:$password" -d "id=$clientName" -d "uri=$1" https://${userNode}/api/statusnet/groups/join.xml)"
+        echo "$result"
+    ;;
+    "-m"* | "--mentions"*)
+        count=$(echo "$action" | tr -cd "[:digit:]")
+        if [ -n "$count" ]; then
+            retrieve=$count
+        fi
+        result="$(curl $curlOpts -u "$userName:$password" -d count="$retrieve" https://${userNode}/api/statuses/mentions_timeline.xml)"
+        display_text "$result"
+    ;;
+    "-M" | "--music")
+        #This is based on currently running music player.
+        if pgrep audacious &> /dev/null ; then
+            album="$(audtool --current-song-tuple-data album)"
+            artist="$(audtool --current-song-tuple-data artist)"
+            musicPlayer="audacious"
+            title="$(audtool --current-song-tuple-data title)"
+        elif pgrep cmus &> /dev/null ; then
+            album="$(cmus-remote -Q | sed -n 's/^tag album //p')"
+            artist="$(cmus-remote -Q | sed -n 's/^tag artist //p')"
+            musicPlayer="cmus"
+            title="$(cmus-remote -Q | sed -n 's/^tag title //p')"
+        elif pgrep deadbeef &> /dev/null ; then
+            album="$(deadbeef --nowplaying "%b" 2> /dev/null)"
+            artist="$(deadbeef --nowplaying "%a" 2> /dev/null)"
+            musicPlayer="deadbeef"
+            title="$(deadbeef --nowplaying "%t" 2> /dev/null)"
+        elif pgrep mopidy &> /dev/null ; then
+            album="$(mpc -f %album% current)"
+            artist="$(mpc -f %artist% current)"
+            musicPlayer="mopidy"
+            title="$(mpc -f %title% current)"
+        elif pgrep mpd &> /dev/null ; then
+            album="$(mpc -f %album% current)"
+            artist="$(mpc -f %artist% current)"
+            musicPlayer="mpd"
+            title="$(mpc -f %title% current)"
+        elif pgrep pianobar &> /dev/null ; then
+            if [ -f "$xdgPath/pianobar/nowplaying" ]; then
+            album="$(cut -f 3 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
+            artist="$(cut -f 1 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
+            musicPlayer="pianobar"
+            station="$(cut -f 4 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
+            title="$(cut -f 2 -d '\' "$xdgPath/pianobar/nowplaying" 2> /dev/null)"
+        else
+            echo "Pianobar is running, but there is no $xdgPath/pianobar/nowplaying file."
+            echo "$clientName can configure Pianobar for you, but this will completely overwrite any existing configuration files."
+            read -n1 -p "Would you like to create a completely new Pianobar configuration? " continue
+            if [ "${continue^}" = "Y" ] ; then
+                configure_pianobar
+            fi
+        fi 
+        elif pgrep xmms2 &> /dev/null ; then
+            album="$(xmms2 info | grep album | cut -d '=' -f2- | sed 's/^ //')"
+            artist="$(xmms2 info | grep artist | cut -d '=' -f2- | sed 's/^ //')"
+            musicPlayer="xmms2"
+            title="$(xmms2 info | grep title | cut -d '=' -f2- | sed 's/^ //')"
+        else
+            notify "Sorry, $client name couldn't detect any music information."
+            exit 0
+        fi
+        if [ "$album" = "${album/ /}" ]; then
+            album="#$album"
+        fi
+        if [ "$artist" = "${artist/ /}" ]; then
+            artist="#$artist"
+        fi
+        if [ "$title" = "${title/ /}" ]; then
+            title="#$title"
+        fi
+        if [ -n "$album" -a -n "$artist" -a -n "$title" ]; then
+            message="#NowPlaying $title by $artist from $album via #$musicPlayer"
+        elif [ -n "$artist" -a -n "$title" ]; then
+            message="#NowPlaying $title by $artist via #$musicPlayer"
+        else
+            notify "Sorry, the current song is either incompletely or improperly tagged. Cannot post."
+            exit 0
+        fi
+        if [ -n "$musicGroup" ] ; then
+            message="${message} !${musicGroup}"
+        fi
+        if [ -n "$station" ] ; then
+            if [ "$station" = "${station/ /}" ]; then
+            station="#$station"
+        fi
+        message="${message} on station ${station}."
+        fi
+        if [ "$verify" = "true" ] ; then
+            read -p "Edit message or press control+c to abort:
+            " -e -i "$message" message
+        fi
+        $0 -p "$message"
+    ;;
+    "-n" | "--notify")
+        if ! [[ "$rate" =~ ^[0-9]+$ ]]; then
+            rate=300
+        fi
+        #Initialize values
+        newId="$(curl $curlOpts -u "$userName:$password" -d count="1" https://${userNode}/api/statuses/home_timeline.xml | grep '^  <id>' | tr -cd "[:digit:]")"
+        oldId=$newId
+        while :; do
+            oldId="$(head -n1 "$configPath/history" | rev | cut -d '=' -f1 | rev)"
+            newId="$(curl $curlOpts -u "$userName:$password" -d count="1" https://${userNode}/api/statuses/home_timeline.xml | grep '^  <id>' | tr -cd "[:digit:]")"
+            if [ $oldId -ne $newId ]; then
+                play -nqV0 synth pl C2 pl C3 pl E2 pl E3 pl G2 pl G3 pl C4 pl C5 pl E4 pl E5 pl G4 pl G5 delay 0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 fade h 0 2.5 1.5 remix - flanger 0 5 chorus 0.25 0.15 100 0.99 0.1 9.9 -s norm &> /dev/null
+                oldId=$newId
+            fi
+            sleep $rate
+        done
+    ;;
+    "-Q"* | "--quote"*)
+        shift
+        target="$1"
+        shift
+        if ! [[ "$target" =~ ^[0-9]+$ ]]; then
+            echo "Quote target must be a number. It's the number in brackets just after the name."
+            exit 0
+        fi
+        in_reply_to="$(grep -m1 "^$target" "$configPath/history" | cut -d '=' -f4)"
+        if [ -z "$in_reply_to" ]; then
+            echo "Quote code not found."
+            exit 0
+        fi
+        name="$(grep -m1 "^$target=" "$configPath/history" | cut -d '=' -f3 | cut -d ':' -f1)"
+        name="${name}@$(grep "^$target=" "$configPath/history" | cut -d '=' -f2 | cut -d ':' -f1)"
+        if echo "$name" | grep "$userNode" &> /dev/null ; then
+            name="$(echo "$name" | cut -d '@' -f1)"
+        fi
+        file="$(mktemp)"
+        quote="QT @$name \""
+        quote="${quote}$(curl $curlOpts -u "$userName:$password" "${userNode}/api/statuses/show.xml?id=${in_reply_to}" | grep '^ <text>' | sed -e 's/^ <text>//' -e 's/<\/text>$//')\""
+        echo "$quote " > "$file"
+        editor="${EDITOR:-nano}"
+        $editor "$file"
+        message="$(cat "$file")"
+        rm "$file" &> /dev/null
+        quote="QT @$name "
+        quote="${quote}$(curl $curlOpts -u "$userName:$password" "${userNode}/api/statuses/show.xml?id=${in_reply_to}" | grep '^ <text>' | sed -e 's/^ <text>//' -e 's/<\/text>$//')"
+        result="$(curl $curlOpts -u "$userName:$password" --data-urlencode status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" $userNode/api/statuses/update.xml)"
+        error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+        if [ -n "$error" ]; then
+            notify "$error"
+            exit 1
+        fi
+        notify "Notice posted containing quote from $name."
+    ;;
+    "-r"* | "--reply"*)
+        shift
+        target="$1"
+        shift
+        if ! [[ "$target" =~ ^[0-9]+$ ]]; then
+            echo "Reply target must be a number. It's the number in brackets just after the name."
+            exit 0
+        fi
+        in_reply_to="$(grep -m1 "^$target" "$configPath/history" | cut -d '=' -f4)"
+        if [ -z "$in_reply_to" ]; then
+            echo "Reply code not found."
+            exit 0
+        fi
+        name="$(grep -m1 "^$target=" "$configPath/history" | cut -d '=' -f3 | cut -d ':' -f1)"
+        name="${name}@$(grep "^$target=" "$configPath/history" | cut -d '=' -f2 | cut -d ':' -f1)"
+        if echo "$name" | grep "$userNode" &> /dev/null ; then
+            name="$(echo "$name" | cut -d '@' -f1)"
+        fi
+        if [ $# -eq 0 ]; then
+            file="$(mktemp)"
+            echo "@$name " > "$file"
+            editor="${EDITOR:-nano}"
+            $editor "$file"
+            message="$(cat "$file")"
+            rm "$file" &> /dev/null
+        else
+            message=" @$name $*"
+            if [ "$verify" = "true" ] ; then
+                read -p "Edit message or press control+c to abort:
+                " -e -i "$message" message
+            fi
+        fi
+        result="$(curl $curlOpts -u "$userName:$password" --data-urlencode status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
+        error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+        if [ -n "$error" ]; then
+            notify "$error"
+            exit 1
+        fi
+        notify "Comment posted in reply to $name."
+    ;;
+    "-R" | "--repeat")
+        shift
+        target="$1"
+        shift
+        if ! [[ "$target" =~ ^[0-9]+$ ]]; then
+            echo "Reply target must be a number. It's the number in brackets just after the name."
+            exit 0
+        fi
+        id="$(grep "^$target=" "$configPath/history" | cut -d '=' -f4)"
+        if [ -z "$id" ]; then
+            echo "Favorite code not found."
+            exit 0
+        fi
+        result="$(curl $curlOpts -u "$userName:$password" -d id="$id" -d source="$clientName" https://${userNode}/api/statuses/retweet/${target}.xml)"
+        error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
+        if [ -n "$error" ]; then
+            notify "$error"
+            exit 1
+        fi
+        notify "Notice $id repeated."
+    ;;
+    "-s" | "--soundclip")
+        file="$(mktemp --suffix .flac)"
+        oggFile="$(mktemp --suffix .ogg)"
+        echo "Recording... Press control+c when you are finished."
+        rec -t flac -qV0 "$file"
+        sox -t flac "$file" "$oggFile" norm
+        rm -f "$file"
+        if [ "$verify" = "true" ]; then
+            echo
+            echo "This is your file, press control+c to skip playback:"
+            play -qV0 "$oggFile" &> /dev/null
+        fi
+        upload="$(curl $curlOpts --form file="@$oggFile" --form submit=upload http://sndup.net/post.php)"
+            jsonInfo="$(echo "$upload" | sed 's/,/\n/g')"
+        fileUrl="$(echo "$jsonInfo" | grep 'url' | sed -e 's/^{"url":"//' -e 's/\/a/\/d/' | tr -d '"\\')"
+        rm -f "$oggFile"
+        message="#audio $fileUrl #soundclip"
+        if [ "$verify" = "true" ]; then
+            echo
+            read -p "Edit message or press enter to send. Press contrl_c to abort:
+            " -e -i "$message" message
+        fi
+        $0 -p "$message"
+    ;;
+    "-t"* | "--timeline"*)
+        count=$(echo "$action" | tr -cd "[:digit:]")
+        if [ -n "$count" ]; then
+            retrieve=$count
+        fi
+        result="$(curl $curlOpts -u "$userName:$password" -d count="$retrieve" https://${userNode}/api/statuses/home_timeline.xml)"
+        display_text "$result"
+    ;;
+    "-u"* | "--user"*)
+        count=$(echo "$action" | tr -cd "[:digit:]")
+        if [ -n "$count" ]; then
+            retrieve=$count
+        fi
+        result="$(curl $curlOpts -u "$userName:$password" -d count="$retrieve" https://${userNode}/api/statuses/home_timeline.xml)"
+        display_text "$result"
+    ;;
+    *)
+        show_help
 esac
 exit 0

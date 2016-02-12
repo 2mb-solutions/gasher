@@ -122,7 +122,7 @@ display_text()
     i=0
     unset pagerText
     while [ $i -lt ${#name[*]} ]; do
-        pagerText="${pagerText}${name[$i]} [$i]: ${text[$i]}\nPosted: ${createdAt[$i]} by ${screenName[$i]}@${uri[$i]} from ${source[$i]}\n"
+        pagerText="${pagerText}\e[${color}m${name[$i]}\e[0m [$i]: ${text[$i]}\n\e[${color}mPosted:\e[0m ${createdAt[$i]} \e[${color}mby\e[0m ${screenName[$i]}@${uri[$i]} \e[${color}mfrom\e[0m ${source[$i]}\n\n"
         echo "$i=${uri[$i]}:name=${screenName[$i]}:reply_id=${statusId[$i]}" >> $configPath/history
         ((i++))
     done
@@ -152,8 +152,11 @@ if [ ! -f "$configPath/config" ]; then
         # Simple obfuscation of passwords
         password="$(echo "$password" | base64 -)"
         read -p "Post music to a group? You need to subscribe to the group for this to work: " -e -i listening musicGroup
-        echo
-        echo -e "userName=${userName}\npassword=${password}\nuserNode=${userNode}" > "$configPath/config"
+	echo "Please choose one of the following colors: "
+	read -p "Black, Red, Green, Yellow, Blue, Violet, Cyan or White: " color
+	color="$(echo $color | tr '[:lower:]' '[:upper:]')"
+	echo -e "# Colors\nRED=31\nGREEN=32\nYELLOW=33\nBLUE=34\nVIOLET=35\nCYAN=36\nWHITE=37\n" > "$configPath/config"
+        echo -e "userName=${userName}\npassword=${password}\nuserNode=${userNode}\ncolor=\${${color}}" >> "$configPath/config"
         if [ -n "$musicGroup" ] ; then
                 echo "musicGroup=${musicGroup}" >> "$configPath/config"
         fi

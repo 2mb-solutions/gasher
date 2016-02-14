@@ -139,27 +139,33 @@ fi
 
 # Create settings if they do not exist.
 if [ ! -f "$configPath/config" ]; then
-        echo "Welcome to $clientName! Brought to you by Storm Dragon."
+        echo "Welcome to $clientName! Brought to you by 2MB Solutions: https://2mb.solutions"
         echo "It appears you do not have a GNU Social account configured."
         echo "Setup is quick and painless."
         echo
         read -p "Please enter your GNU Social username, This is the part before the @ symbol: " userName
         read -p "Please enter your GNU Social node: " -e -i 2mb.social userNode
         read -sp "Please enter your GNU Social password: " password
-        # Simple obfuscation of passwords
+        # Simple obfuscation of username and passwords, also allows for special symbols
+        userName="$(echo "$userName" | base64 -)"
         password="$(echo "$password" | base64 -)"
         read -p "Post music to a group? You need to subscribe to the group for this to work: " -e -i listening musicGroup
-	echo "Please choose one of the following colors: "
-	read -p "Black, Red, Green, Yellow, Blue, Violet, Cyan or White: " color
-	color="$(echo $color | tr '[:lower:]' '[:upper:]')"
-	echo -e "# Colors\nRED=31\nGREEN=32\nYELLOW=33\nBLUE=34\nVIOLET=35\nCYAN=36\nWHITE=37\n" > "$configPath/config"
-        echo -e "userName=${userName}\npassword=${password}\nuserNode=${userNode}\ncolor=\${${color}}" >> "$configPath/config"
+        echo "Please choose one of the following colors: "
+        select color in Black Red Green Yellow Blue Violet Cyan White; do
+            color="${color^^}"
+            if [ -n "$color" ]; then
+                break
+            fi
+        done
+        echo -e "# Colors\nRED=31\nGREEN=32\nYELLOW=33\nBLUE=34\nVIOLET=35\nCYAN=36\nWHITE=37\n" > "$configPath/config"
+        echo -e "userName=${userName}\npassword=${password}\nuserNode=${userNode}\ncolor=\$$color\nretrieve=100" >> "$configPath/config"
         if [ -n "$musicGroup" ] ; then
                 echo "musicGroup=${musicGroup}" >> "$configPath/config"
         fi
     chmod 600 "$configPath/config"
         if [ $? -eq 0 ] ; then
-                echo "Thanks, setup is now complete. Welcome to $clientName $userName@$userNode."
+                echo "Thanks, setup is now complete. Welcome to $clientName $(echo "$userName" | base64 --decode -)@$userNode."
+        exit 0
         fi
 fi
 
@@ -182,7 +188,8 @@ esac
 if [ -z "$userName" ]; then
     source "$configPath/config"
 fi
-# Deobfuscate  password:
+# Deobfuscate username and password:
+userName="$(echo "$userName" | base64 --decode -)"
 password="$(echo "$password" | base64 --decode -)"
 # Pager is set here, to allow the PAGER variable to be set in either invironment or gasher's config
 PAGER="${PAGER:-more}"

@@ -26,7 +26,7 @@ $0 -P --play status_code: Searches for sndup links in the provided status_code a
 $0 -Q --quote status_code text: Repeat a notice with your own text added. Opens \$EDITOR with the quoted text ready for your addition.
 $0 -r --reply status_code: reply to someone. Status_code is the number in brackets after their name.
 $0 -R --repeat status_code: Repeat the notice with the code you chose. The codes are in the brackets just after the name.
-$0 -s --soundclip: Interactively post a soundclip.
+$0 -s --soundclip: Interactively post a soundclip. Implies verify.
 $0 -t --timeline: Read your timeline.
 $0 -u --user: Read your statuses only.
 For commands that post a status, add v, V, or -verify to view your status before posting.
@@ -572,11 +572,9 @@ case "$action" in
         fileUrl="$(echo "$jsonInfo" | grep 'url' | sed -e 's/^{"url":"//' -e 's/\/a/\/d/' | tr -d '"\\')"
         rm -f "$oggFile"
         message="#audio $fileUrl #soundclip"
-        if [ "$verify" = "true" ]; then
-            echo
-            read -p "Edit message or press enter to send. Press contrl_c to abort:
-            " -e -i "$message" message
-        fi
+        echo
+        read -p "Edit message or press enter to send. Press contrl_c to abort:
+        " -e -i "$message" message
         $0 -p "$message"
     ;;
     "-t"* | "--timeline"*)

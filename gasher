@@ -10,7 +10,7 @@ $clientName, brought to you by 2MB Solutions.
 released under the terms of the unlicense: http://unlicense.org/
 
 Usage:
-$0 -a --account name: Use config file $configPath/config.name. Useful if you have multiple accounts.
+$0 -a --account name: Use config file $xdgPath/gasher/config.name. Useful if you have multiple accounts.
 $0 -d --direct-messages: View your direct messages.
 $0 -D --post-direct-message recipient message: Send a direct message.
 $0 -F --favorite status_code: Favorite the notice with the code you chose. The codes are in the brackets just after the name.
@@ -111,7 +111,7 @@ display_text()
     # backup IFS
     ifs="$IFS"
     IFS=$'\n'
-    rm -f $configPath/history
+    rm -f $xdgPath/gasher/history
     createdAt=($(echo "$1" | grep '^  <created_at>' | sed -e 's/^  <created_at>//' -e 's/<\/created_at>$//'))
     name=($(echo "$1" | grep '^   <name>' | sed -e 's/^   <name>//' -e 's/<\/name>$//' -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&amp;/&/g'))
     screenName=($(echo "$1" | grep '^   <screen_name>' | sed -e 's/^   <screen_name>//' -e 's/<\/screen_name>$//' -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&amp;/&/g'))
@@ -124,7 +124,7 @@ display_text()
     unset pagerText
     while [ $i -lt ${#name[*]} ]; do
         pagerText="${pagerText}\e[${color}m${name[$i]}\e[0m [$i]: ${text[$i]}\n\e[${color}mPosted:\e[0m ${createdAt[$i]} \e[${color}mby\e[0m ${screenName[$i]}@${uri[$i]} \e[${color}mfrom\e[0m ${source[$i]}\n\n"
-        echo "$i=${uri[$i]}:name=${screenName[$i]}:reply_id=${statusId[$i]}" >> $configPath/history
+        echo "$i=${uri[$i]}:name=${screenName[$i]}:reply_id=${statusId[$i]}" >> $xdgPath/gasher/history
         ((i++))
     done
     IFS="$ifs"
@@ -132,14 +132,13 @@ display_text()
 }
 
 # Set up the configuration directory information
-configPath="${XDG_CONFIG_HOME:-$HOME/.config}"
-configPath="${configPath}/gasher"
-if [ ! -d "$configPath" ]; then
-        mkdir -p "$configPath"
+xdgPath="${XDG_CONFIG_HOME:-$HOME/.config}"
+if [ ! -d "$xdgPath/gasher" ]; then
+        mkdir -p "$xdgPath/gasher"
 fi
 
 # Create settings if they do not exist.
-if [ ! -f "$configPath/config" ]; then
+if [ ! -f "$xdgPath/gasher/config" ]; then
         echo "Welcome to $clientName! Brought to you by 2MB Solutions: https://2mb.solutions"
         echo "It appears you do not have a GNU Social account configured."
         echo "Setup is quick and painless."
@@ -158,10 +157,10 @@ if [ ! -f "$configPath/config" ]; then
                 break
             fi
         done
-        echo -e "# Colors\nRED=31\nGREEN=32\nYELLOW=33\nBLUE=34\nVIOLET=35\nCYAN=36\nWHITE=37\n" > "$configPath/config"
-        echo -e "userName=${userName}\npassword=${password}\nuserNode=${userNode}\ncolor=\$$color\nretrieve=100" >> "$configPath/config"
+        echo -e "# Colors\nRED=31\nGREEN=32\nYELLOW=33\nBLUE=34\nVIOLET=35\nCYAN=36\nWHITE=37\n" > "$xdgPath/gasher/config"
+        echo -e "userName=${userName}\npassword=${password}\nuserNode=${userNode}\ncolor=\$$color\nretrieve=100" >> "$xdgPath/gasher/config"
         if [ -n "$musicGroup" ] ; then
-                echo "musicGroup=${musicGroup}" >> "$configPath/config"
+                echo "musicGroup=${musicGroup}" >> "$xdgPath/gasher/config"
         fi
     if command -v mpv &> /dev/null ; then
         mediaplayer="$(command -v mpv) -really-quiet -vo null"
@@ -171,9 +170,9 @@ if [ ! -f "$configPath/config" ]; then
         mediaplayer="$(command -v play)"
     fi
         if [ -n "$mediaplayer" ] ; then
-                echo "mediaplayer=\"${mediaplayer}\"" >> "$configPath/config"
+                echo "mediaplayer=\"${mediaplayer}\"" >> "$xdgPath/gasher/config"
         fi
-    chmod 600 "$configPath/config"
+    chmod 600 "$xdgPath/gasher/config"
         if [ $? -eq 0 ] ; then
                 echo "Thanks, setup is now complete. Welcome to $clientName $(echo "$userName" | base64 --decode -)@$userNode."
         exit 0
@@ -193,11 +192,11 @@ notify()
 case "$1" in
     "-a" | "--account")
             shift
-            source "$configPath/config.$1"
+            source "$xdgPath/gasher/config.$1"
             shift
 esac
 if [ -z "$userName" ]; then
-    source "$configPath/config"
+    source "$xdgPath/gasher/config"
 fi
 # Deobfuscate username and password:
 userName="$(echo "$userName" | base64 --decode -)"
@@ -279,7 +278,7 @@ case "$action" in
             echo "Reply target must be a number. It's the number in brackets just after the name."
             exit 0
         fi
-        id="$(grep "^$target" "$configPath/history" | cut -d '=' -f4)"
+        id="$(grep "^$target" "$xdgPath/gasher/history" | cut -d '=' -f4)"
         if [ -z "$id" ]; then
             echo "Favorite code not found."
             exit 0
@@ -431,7 +430,7 @@ case "$action" in
         newId="$(curl $curlOpts -u "$userName:$password" -d count="1" https://${userNode}/api/statuses/home_timeline.xml | grep '^  <id>' | tr -cd "[:digit:]")"
         oldId=$newId
         while :; do
-            oldId="$(head -n1 "$configPath/history" | rev | cut -d '=' -f1 | rev)"
+            oldId="$(head -n1 "$xdgPath/gasher/history" | rev | cut -d '=' -f1 | rev)"
             newId="$(curl $curlOpts -u "$userName:$password" -d count="1" https://${userNode}/api/statuses/home_timeline.xml | grep '^  <id>' | tr -cd "[:digit:]")"
             if [ $oldId -ne $newId ]; then
                 play -nqV0 synth pl C2 pl C3 pl E2 pl E3 pl G2 pl G3 pl C4 pl C5 pl E4 pl E5 pl G4 pl G5 delay 0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 fade h 0 2.5 1.5 remix - flanger 0 5 chorus 0.25 0.15 100 0.99 0.1 9.9 -s norm &> /dev/null
@@ -448,7 +447,7 @@ case "$action" in
             echo "Quote target must be a number. It's the number in brackets just after the name."
             exit 0
         fi
-        in_reply_to="$(grep -m1 "^$target" "$configPath/history" | cut -d '=' -f4)"
+        in_reply_to="$(grep -m1 "^$target" "$xdgPath/gasher/history" | cut -d '=' -f4)"
         if [ -z "$in_reply_to" ]; then
             echo "Status code not found."
             exit 0
@@ -468,13 +467,13 @@ case "$action" in
             echo "Quote target must be a number. It's the number in brackets just after the name."
             exit 0
         fi
-        in_reply_to="$(grep -m1 "^$target" "$configPath/history" | cut -d '=' -f4)"
+        in_reply_to="$(grep -m1 "^$target" "$xdgPath/gasher/history" | cut -d '=' -f4)"
         if [ -z "$in_reply_to" ]; then
             echo "Quote code not found."
             exit 0
         fi
-        name="$(grep -m1 "^$target=" "$configPath/history" | cut -d '=' -f3 | cut -d ':' -f1)"
-        name="${name}@$(grep "^$target=" "$configPath/history" | cut -d '=' -f2 | cut -d ':' -f1)"
+        name="$(grep -m1 "^$target=" "$xdgPath/gasher/history" | cut -d '=' -f3 | cut -d ':' -f1)"
+        name="${name}@$(grep "^$target=" "$xdgPath/gasher/history" | cut -d '=' -f2 | cut -d ':' -f1)"
         if echo "$name" | grep "$userNode" &> /dev/null ; then
             name="$(echo "$name" | cut -d '@' -f1)"
         fi
@@ -504,13 +503,13 @@ case "$action" in
             echo "Reply target must be a number. It's the number in brackets just after the name."
             exit 0
         fi
-        in_reply_to="$(grep -m1 "^$target" "$configPath/history" | cut -d '=' -f4)"
+        in_reply_to="$(grep -m1 "^$target" "$xdgPath/gasher/history" | cut -d '=' -f4)"
         if [ -z "$in_reply_to" ]; then
             echo "Reply code not found."
             exit 0
         fi
-        name="$(grep -m1 "^$target=" "$configPath/history" | cut -d '=' -f3 | cut -d ':' -f1)"
-        name="${name}@$(grep "^$target=" "$configPath/history" | cut -d '=' -f2 | cut -d ':' -f1)"
+        name="$(grep -m1 "^$target=" "$xdgPath/gasher/history" | cut -d '=' -f3 | cut -d ':' -f1)"
+        name="${name}@$(grep "^$target=" "$xdgPath/gasher/history" | cut -d '=' -f2 | cut -d ':' -f1)"
         if echo "$name" | grep "$userNode" &> /dev/null ; then
             name="$(echo "$name" | cut -d '@' -f1)"
         fi
@@ -544,7 +543,7 @@ case "$action" in
             echo "Reply target must be a number. It's the number in brackets just after the name."
             exit 0
         fi
-        id="$(grep "^$target=" "$configPath/history" | cut -d '=' -f4)"
+        id="$(grep "^$target=" "$xdgPath/gasher/history" | cut -d '=' -f4)"
         if [ -z "$id" ]; then
             echo "Favorite code not found."
             exit 0

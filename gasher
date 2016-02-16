@@ -67,11 +67,11 @@ echo "$artist\\$title\\$album\\$stationName" > $HOME/.config/pianobar/nowplaying
 ;;
 "songfinish")
 rm $HOME/.config/pianobar/nowplaying
-;;
-"songlove")
+;;' > "$xdgPath/pianobar/eventcmd.sh"
+echo "\"songlove\")
 $0 -M
-;;
-*)
+;;" >> "$xdgPath/pianobar/eventcmd.sh"
+echo '*)
 if [ "$pRet" -ne 1 ]; then
 echo "$1 failed"
 elif [ "$wRet" -ne 1 ]; then
@@ -79,7 +79,7 @@ echo "$a failed, network error."
 fi
 ;;
 esac
-exit 0' > $xdgPath/pianobar/eventcmd.sh
+exit 0' >> "$xdgPath/pianobar/eventcmd.sh"
 }
 
 #configure pianobar

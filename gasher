@@ -26,7 +26,7 @@ $0 -P --play status_code: Searches for sndup links in the provided status_code a
 $0 -Q --quote status_code text: Repeat a notice with your own text added. Opens \$EDITOR with the quoted text ready for your addition.
 $0 -r --reply status_code: reply to someone. Status_code is the number in brackets after their name.
 $0 -R --repeat status_code: Repeat the notice with the code you chose. The codes are in the brackets just after the name.
-$0 -s --soundclip: Interactively post a soundclip. Implies verify.
+$0 -s --soundclip: Interactively post a soundclip. Implies verify. If you specify the verify flag anyway, your sound file will be played so you can preview it. If you specify a file, that file will be used instead of recording a live one.
 $0 -t --timeline: Read your timeline.
 $0 -u --user: Read your statuses only.
 For commands that post a status, add v, V, or -verify to view your status before posting.
@@ -557,12 +557,21 @@ case "$action" in
         notify "Notice $id repeated."
     ;;
     "-s" | "--soundclip")
-        file="$(mktemp --suffix .flac)"
-        oggFile="$(mktemp --suffix .ogg)"
-        echo "Recording... Press control+c when you are finished."
-        rec -t flac -qV0 "$file"
-        sox -t flac "$file" "$oggFile" norm
-        rm -f "$file"
+        shift
+        if [ $# -eq 0 ]; then
+            file="$(mktemp --suffix .flac)"
+            oggFile="$(mktemp --suffix .ogg)"
+            echo "Recording... Press control+c when you are finished."
+            rec -t flac -qV0 "$file"
+            sox -t flac "$file" "$oggFile" norm
+            rm -f "$file"
+        else
+            if [ -f "$1" ]; then
+                oggFile="$1"
+            else
+                die "File not found."
+            fi
+        fi
         if [ "$verify" = "true" ]; then
             echo
             echo "This is your file, press control+c to skip playback:"

@@ -21,9 +21,10 @@ $0 -m --mentions: Read your mensions (replies).
 $0 -M --music: automatically post the playing song. Supported clients are cmus, mpd, pianobar, and xmms2.
 $0 -n --notify: Notify you of new activity. You can add rate=seconds to the config file. The default is 300 (5 minutes).
 Add an & to send the process to the background
-$0 -p --post: Post to your node.
+$0 -p --post: Post to your node. Without arguments, opens \$EDITOR. Considers anything after -p or --post to be the status and will post it to your timeline.
+$0 -P --play status_code: Searches for sndup links in the provided status_code and plays them. Players used, in order, are mpv, mplayer, or sox. You can override this in the config file with mediaplayer=choice.
 $0 -Q --quote status_code text: Repeat a notice with your own text added. Opens \$EDITOR with the quoted text ready for your addition.
-$0 -r --reply number: reply to someone. Number is the number in brackets after their name.
+$0 -r --reply status_code: reply to someone. Status_code is the number in brackets after their name.
 $0 -R --repeat status_code: Repeat the notice with the code you chose. The codes are in the brackets just after the name.
 $0 -s --soundclip: Interactively post a soundclip.
 $0 -t --timeline: Read your timeline.
@@ -162,6 +163,16 @@ if [ ! -f "$configPath/config" ]; then
         if [ -n "$musicGroup" ] ; then
                 echo "musicGroup=${musicGroup}" >> "$configPath/config"
         fi
+    if command -v mpv &> /dev/null ; then
+        mediaplayer="$(command -v mpv) -really-quiet -vo null"
+    elif command -v mplayer &> /dev/null ; then
+        mediaplayer="$(command -v mplayer) -really-quiet -vo null"
+    elif command -v sox &> /dev/null ; then
+        mediaplayer="$(command -v play)"
+    fi
+        if [ -n "$mediaplayer" ] ; then
+                echo "mediaplayer=\"${mediaplayer}\"" >> "$configPath/config"
+        fi
     chmod 600 "$configPath/config"
         if [ $? -eq 0 ] ; then
                 echo "Thanks, setup is now complete. Welcome to $clientName $(echo "$userName" | base64 --decode -)@$userNode."
@@ -197,6 +208,8 @@ PAGER="${PAGER:-more}"
 curlOpts="${curlOpts:--s}"
 # Set the number of statuses to retrieve:
 retrieve="${retrieve:-100}"
+# Set media player
+play="$mediaplayer"
 
 # Find out if we have GUI capabilities
 unset gui
@@ -423,6 +436,26 @@ case "$action" in
                 oldId=$newId
             fi
             sleep $rate
+        done
+    ;;
+    "-P"* | "--play"*)
+        shift
+        target="$1"
+        shift
+        if ! [[ "$target" =~ ^[0-9]+$ ]]; then
+            echo "Quote target must be a number. It's the number in brackets just after the name."
+            exit 0
+        fi
+        in_reply_to="$(grep -m1 "^$target" "$configPath/history" | cut -d '=' -f4)"
+        if [ -z "$in_reply_to" ]; then
+            echo "Status code not found."
+            exit 0
+        fi
+        status="$(curl $curlOpts -u "$userName:$password" "${userNode}/api/statuses/show.xml?id=${in_reply_to}" | grep '^ <text>' | sed -e 's/^ <text>//' -e 's/<\/text>$//')\""
+        for i in ${status[@]} ; do
+            if [[ "$i" =~ http://sndup.net/.*/[ad] ]]; then
+                $play "$(echo "$i" | sed 's/a$/d/')"
+            fi
         done
     ;;
     "-Q"* | "--quote"*)

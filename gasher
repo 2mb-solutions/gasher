@@ -378,6 +378,8 @@ case "$action" in
             read -n1 -p "Would you like to create a completely new Pianobar configuration? " continue
             if [ "${continue^}" = "Y" ] ; then
                 configure_pianobar
+            else
+                exit 0
             fi
         fi 
         elif pgrep xmms2 &> /dev/null ; then

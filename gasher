@@ -399,9 +399,9 @@ case "$action" in
         if [ "$title" = "${title/ /}" ]; then
             title="#$title"
         fi
-        if [ -n "$album" -a -n "$artist" -a -n "$title" ]; then
+        if [ -n "${album/\#/}" -a -n "${artist/\#/}" -a -n "${title/\#/}" ]; then
             message="#NowPlaying $title by $artist from $album via #$musicPlayer"
-        elif [ -n "$artist" -a -n "$title" ]; then
+        elif [ -n "${artist/\#/}" -a -n "${title/\#/}" ]; then
             message="#NowPlaying $title by $artist via #$musicPlayer"
         else
             notify "Sorry, the current song is either incompletely or improperly tagged. Cannot post."

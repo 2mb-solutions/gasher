@@ -182,7 +182,7 @@ fi
 notify()
 {
         if [ $gui ]; then
-                $gui --notify --timeout 5 --selectable-labels --text "$*"
+                $gui "$*"
         else
                 echo "$*"
         fi
@@ -213,8 +213,8 @@ play="$mediaplayer"
 # Find out if we have GUI capabilities
 unset gui
 if [[ -n "$DISPLAY" ]]; then
-    if hash yad &> /dev/null ; then
-        gui="$(which yad)"
+    if command -v notify-send &> /dev/null ; then
+        gui="$(command -v notify-send)"
     fi
 fi
 

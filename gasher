@@ -27,6 +27,7 @@ $0 -Q --quote status_code text: Repeat a notice with your own text added. Opens 
 $0 -r --reply status_code: reply to someone. Status_code is the number in brackets after their name.
 $0 -R --repeat status_code: Repeat the notice with the code you chose. The codes are in the brackets just after the name.
 $0 -s --soundclip: Interactively post a soundclip. Implies verify. If you specify the verify flag anyway, your sound file will be played so you can preview it. If you specify a file, that file will be used instead of recording a live one.
+$0 --stop: Stop a running --notify instance.
 $0 -t --timeline: Read your timeline.
 $0 -u --user: Read your statuses only.
 For commands that post a status, add v, V, or -verify to view your status before posting.
@@ -604,14 +605,15 @@ case "$action" in
             pid="$(cat "$xdgPath/gasher/pid")"
         fi
         if [[ "$pid" =~ ^[0-9]+$ ]]; then
-        if [[ "$(ps -p $pid -o comm=)" = "${0##*/}" ]]; then
+        if [[ "$(ps -p $pid -o comm=)" = "bash" ]]; then
             pkill $pid
-            notify "--notify stopped"
+            notify "notify stopped"
             rm "$xdgPath/gasher/pid"
-        else
-            notify "--notify doesn't seem to be enabled currently."
+            exit 0
         fi
         fi
+        notify "notify doesn't seem to be enabled currently."
+        exit 0
     ;;
     "-u"* | "--user"*)
         count=$(echo "$action" | tr -cd "[:digit:]")
@@ -624,4 +626,5 @@ case "$action" in
     *)
         show_help
 esac
+
 exit 0

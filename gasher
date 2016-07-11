@@ -438,7 +438,8 @@ case "$action" in
                     $gui "$noticeCount updates are wating on $userNode."
                 fi
                 notes=("pl C2" "pl C3" "pl E2" "pl E3" "pl G2" "pl G3" "pl C4" "pl C5" "pl E4" "pl E5" "pl G4" "pl G5")
-                play -nqV0 synth ${notes[@]:0:$noticeCount} delay 0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 fade h 0 2.5 1.5 remix - flanger 0 5 chorus 0.25 0.15 100 0.99 0.1 9.9 -s norm &> /dev/null
+                delays=(0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55)
+                play -nqV0 synth ${notes[@]:0:$noticeCount} delay ${delays[@]:0:$noticeCount} fade h 0 2.5 1.5 remix - flanger 0 5 chorus 0.25 0.15 100 0.99 0.1 9.9 -s norm &> /dev/null
                 oldId=$newId
             fi
             sleep $rate

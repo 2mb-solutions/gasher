@@ -422,6 +422,7 @@ case "$action" in
         $0 -p "$message"
     ;;
     "-n" | "--notify")
+        echo -n "$$" > "$xdgPath/gasher/pid"
         if ! [[ "$rate" =~ ^[0-9]+$ ]]; then
             rate=900
         fi
@@ -596,6 +597,21 @@ case "$action" in
         fi
         result="$(curl $curlOpts -u "$userName:$password" -d count="$retrieve" https://${userNode}/api/statuses/home_timeline.xml)"
         display_text "$result"
+    ;;
+    "--stop")
+        unset pid
+        if [ -f "$xdgPath/gasher/pid" ]; then
+            pid="$(cat "$xdgPath/gasher/pid")"
+        fi
+        if [[ "$pid" =~ ^[0-9]+$ ]]; then
+        if [[ "$(ps -p $pid -o comm=)" = "${0##*/}" ]]; then
+            pkill $pid
+            notify "--notify stopped"
+            rm "$xdgPath/gasher/pid"
+        else
+            notify "--notify doesn't seem to be enabled currently."
+        fi
+        fi
     ;;
     "-u"* | "--user"*)
         count=$(echo "$action" | tr -cd "[:digit:]")

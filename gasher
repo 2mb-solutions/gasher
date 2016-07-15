@@ -390,6 +390,22 @@ case "$action" in
             notify "Sorry, $client name couldn't detect any music information."
             exit 0
         fi
+        # Check lyricsmania
+        lyricsArtist="$(echo "$artist" | sed -e 's/^[Tt]he //' -e "s/ /_/g" -e "s/([[:print:]]*)//g" -e "s/['\/\.]//g" -e 's/&/and/g')"
+        lyricsTitle="$(echo "$title" | sed -e 's/^[Tt]he //' -e "s/ /_/g" -e "s/([[:print:]]*)//g" -e "s/['\/\.]//g" -e 's/&/and/g')"
+        lyricsUrl="http://www.lyricsmania.com/${lyricsTitle}_lyrics_${lyricsArtist}.html"
+        if ! curl -s "$lyricsUrl" | grep '<strong>Lyrics to ' &> /dev/null ; then
+            unset lyricsUrl
+        fi
+        if [ -z "$lyricsUrl" ]; then
+            # Check azlyrics
+            lyricsArtist="$(echo "$artist" | sed -e 's/^[Tt]he //' -e "s/ //g" -e "s/([[:print:]]*)//g" -e "s/['\/\.]//g" -e 's/&/and/g')"
+            lyricsTitle="$(echo "$title" | sed -e 's/^[Tt]he //' -e "s/ //g" -e "s/([[:print:]]*)//g" -e "s/['\/\.]//g" -e 's/&/and/g')"
+            lyricsUrl="http://www.azlyrics.com/lyrics/${lyricsArtist,,}/${lyricsTitle,,}.html"
+            if ! curl -s -A "Mozilla/4.0" "$lyricsUrl" | grep '<!-- Usage of azlyrics.com content by any third-party' &> /dev/null ; then
+                unset lyricsUrl
+            fi
+        fi
         if [ "$album" = "${album/ /}" ]; then
             album="#$album"
         fi
@@ -415,6 +431,9 @@ case "$action" in
             station="#$station"
         fi
         message="${message} on station ${station}."
+        fi
+        if [ -n "$lyricsUrl" ]; then
+            message="${message} $lyricsUrl"
         fi
         if [ "$verify" = "true" ] ; then
             read -p "Edit message or press control+c to abort:

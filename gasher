@@ -252,7 +252,7 @@ case "$action" in
                 " -e -i "$message" message
             fi
         fi
-        result="$(curl $curlOpts -u "$userName:$password" -d user="$target" --data-urlencode text="$message" -d source="$clientName" https://${userNode}/api/direct_messages/new.xml)"
+        result="$(curl $curlOpts -u "$userName:$password" -d user="$target" --data-binary text="$message" -d source="$clientName" https://${userNode}/api/direct_messages/new.xml)"
         error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
         if [ -n "$error" ]; then
             notify "$error"
@@ -313,7 +313,7 @@ case "$action" in
         if [ "$pimp" = "true" ]; then
             message="$(curl -s --data-urlencode English="$message" --data-urlencode submit=" Talk Like a Pimp " http://joel.net/EBONICS/translator/ | grep -A9 '<div class="bubble1 comicfont">' | sed -e '/<div/d' -e '/<\/div>/d' -e "s/&#39;/'/g")"
         fi
-        result="$(curl $curlOpts -u "$userName:$password" --data-urlencode status="$message" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
+        result="$(curl $curlOpts -u "$userName:$password" --data-binary status="$message" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
         error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
         if [ -f "$file" ]; then
             rm "$file" &> /dev/null
@@ -513,7 +513,7 @@ case "$action" in
         rm "$file" &> /dev/null
         quote="QT @$name "
         quote="${quote}$(curl $curlOpts -u "$userName:$password" "${userNode}/api/statuses/show.xml?id=${in_reply_to}" | grep '^ <text>' | sed -e 's/^ <text>//' -e 's/<\/text>$//')"
-        result="$(curl $curlOpts -u "$userName:$password" --data-urlencode status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" $userNode/api/statuses/update.xml)"
+        result="$(curl $curlOpts -u "$userName:$password" --data-binary status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" $userNode/api/statuses/update.xml)"
         error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
         if [ -n "$error" ]; then
             notify "$error"
@@ -553,7 +553,7 @@ case "$action" in
                 " -e -i "$message" message
             fi
         fi
-        result="$(curl $curlOpts -u "$userName:$password" --data-urlencode status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
+        result="$(curl $curlOpts -u "$userName:$password" --data-binary status="$message" -d in_reply_to_status_id="$in_reply_to" -d source="$clientName" https://${userNode}/api/statuses/update.xml)"
         error="$(echo "$result" | grep '^ <error>' | sed -e 's/<error>//' -e 's/<\/error>//' -e 's/^ //')"
         if [ -n "$error" ]; then
             notify "$error"
